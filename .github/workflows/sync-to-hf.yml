@@ -16,6 +16,7 @@ jobs:
 
       - name: Push to Hugging Face Spaces
         env:
+          HF_USERNAME: EdwBryan
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_ACCESS_TOKEN: ${{ secrets.HF_ACCESS_TOKEN }}
           HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HUGGINGFACEHUB_API_TOKEN }}
@@ -26,11 +27,11 @@ jobs:
             exit 1
           fi
           export TOKEN
-          ASKPASS_SCRIPT="$(mktemp)"
+          ASKPASS_SCRIPT="$(mktemp -t git-askpass.XXXXXX)"
           cat > "$ASKPASS_SCRIPT" <<'EOF'
           #!/usr/bin/env sh
           case "$1" in
-            *Username*) echo "EdwBryan" ;;
+            *Username*) echo "$HF_USERNAME" ;;
             *Password*) echo "$TOKEN" ;;
           esac
           EOF
