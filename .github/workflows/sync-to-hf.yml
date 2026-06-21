@@ -31,10 +31,11 @@ jobs:
           cat > "$ASKPASS_SCRIPT" <<'EOF'
           #!/usr/bin/env sh
           case "$1" in
-            *Username*) echo "$HF_USERNAME" ;;
-            *Password*) echo "$TOKEN" ;;
+            Username*) echo "$HF_USERNAME" ;;
+            Password*) echo "$TOKEN" ;;
+            *) exit 1 ;;
           esac
           EOF
-          chmod +x "$ASKPASS_SCRIPT"
+          chmod 700 "$ASKPASS_SCRIPT"
           GIT_ASKPASS="$ASKPASS_SCRIPT" GIT_TERMINAL_PROMPT=0 git push --force https://huggingface.co/spaces/EdwBryan/ai-genre-classifier main
           rm -f "$ASKPASS_SCRIPT"
