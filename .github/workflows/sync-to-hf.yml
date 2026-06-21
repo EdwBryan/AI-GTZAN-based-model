@@ -26,8 +26,8 @@ jobs:
             echo "::error::Missing Hugging Face token secret. Please set one of: HF_TOKEN, HF_ACCESS_TOKEN, or HUGGINGFACEHUB_API_TOKEN."
             exit 1
           fi
-          export TOKEN
           ASKPASS_SCRIPT="$(mktemp -t git-askpass.XXXXXX)"
+          trap 'rm -f "$ASKPASS_SCRIPT"' EXIT
           cat > "$ASKPASS_SCRIPT" <<'EOF'
           #!/usr/bin/env sh
           case "$1" in
@@ -37,5 +37,4 @@ jobs:
           esac
           EOF
           chmod 700 "$ASKPASS_SCRIPT"
-          GIT_ASKPASS="$ASKPASS_SCRIPT" GIT_TERMINAL_PROMPT=0 git push --force https://huggingface.co/spaces/EdwBryan/ai-genre-classifier main
-          rm -f "$ASKPASS_SCRIPT"
+          TOKEN="$TOKEN" GIT_ASKPASS="$ASKPASS_SCRIPT" GIT_TERMINAL_PROMPT=0 git push --force "https://huggingface.co/spaces/$HF_USERNAME/ai-genre-classifier" main
