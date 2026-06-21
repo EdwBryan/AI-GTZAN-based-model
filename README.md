@@ -3,7 +3,7 @@ title: AI Genre Classifier
 emoji: 🎵
 colorFrom: purple
 colorTo: indigo
-sdk: streamlit
+sdk: docker
 pinned: true
 short_description: Clasificador automático de géneros musicales con ML
 ---
