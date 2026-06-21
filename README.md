@@ -4,7 +4,6 @@ emoji: 🎵
 colorFrom: purple
 colorTo: indigo
 sdk: streamlit
-app_file: app/app.py
 pinned: true
 short_description: Clasificador automático de géneros musicales con ML
 ---
