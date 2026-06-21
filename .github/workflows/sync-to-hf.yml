@@ -26,13 +26,14 @@ jobs:
             exit 1
           fi
           export TOKEN
-          cat > /tmp/hf-askpass.sh <<'EOF'
+          ASKPASS_SCRIPT="$(mktemp)"
+          cat > "$ASKPASS_SCRIPT" <<'EOF'
           #!/usr/bin/env sh
           case "$1" in
             *Username*) echo "EdwBryan" ;;
             *Password*) echo "$TOKEN" ;;
           esac
           EOF
-          chmod 700 /tmp/hf-askpass.sh
-          GIT_ASKPASS=/tmp/hf-askpass.sh GIT_TERMINAL_PROMPT=0 git push --force https://huggingface.co/spaces/EdwBryan/ai-genre-classifier main
-          rm -f /tmp/hf-askpass.sh
+          chmod +x "$ASKPASS_SCRIPT"
+          GIT_ASKPASS="$ASKPASS_SCRIPT" GIT_TERMINAL_PROMPT=0 git push --force https://huggingface.co/spaces/EdwBryan/ai-genre-classifier main
+          rm -f "$ASKPASS_SCRIPT"
