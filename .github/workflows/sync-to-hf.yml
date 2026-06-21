@@ -37,4 +37,5 @@ jobs:
           esac
           EOF
           chmod 700 "$ASKPASS_SCRIPT"
-          TOKEN="$TOKEN" GIT_ASKPASS="$ASKPASS_SCRIPT" GIT_TERMINAL_PROMPT=0 git push --force "https://huggingface.co/spaces/$HF_USERNAME/ai-genre-classifier" main
+          export HF_USERNAME TOKEN
+          GIT_ASKPASS="$ASKPASS_SCRIPT" GIT_TERMINAL_PROMPT=0 git push --force "https://huggingface.co/spaces/$HF_USERNAME/ai-genre-classifier" main
