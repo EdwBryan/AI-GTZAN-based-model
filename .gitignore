@@ -1,0 +1,19 @@
+# Word documents and PDFs
+*.doc
+*.docx
+*.pdf
+
+# Word temp files
+~$*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+venv/
+.venv/
+
+
