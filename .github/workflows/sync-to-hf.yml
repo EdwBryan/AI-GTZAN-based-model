@@ -22,7 +22,7 @@ jobs:
         run: |
           TOKEN="${HF_TOKEN:-${HF_ACCESS_TOKEN:-$HUGGINGFACEHUB_API_TOKEN}}"
           if [ -z "$TOKEN" ]; then
-            echo "::error::Missing Hugging Face token secret."
+            echo "::error::Missing Hugging Face token secret. Please set one of: HF_TOKEN, HF_ACCESS_TOKEN, or HUGGINGFACEHUB_API_TOKEN."
             exit 1
           fi
           git config --global url."https://EdwBryan:${TOKEN}@huggingface.co/".insteadOf "https://huggingface.co/"
