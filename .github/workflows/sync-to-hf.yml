@@ -16,10 +16,13 @@ jobs:
 
       - name: Push to Hugging Face Spaces
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.HF_ACCESS_TOKEN || secrets.HUGGINGFACEHUB_API_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_ACCESS_TOKEN: ${{ secrets.HF_ACCESS_TOKEN }}
+          HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HUGGINGFACEHUB_API_TOKEN }}
         run: |
-          if [ -z "$HF_TOKEN" ]; then
+          TOKEN="${HF_TOKEN:-${HF_ACCESS_TOKEN:-$HUGGINGFACEHUB_API_TOKEN}}"
+          if [ -z "$TOKEN" ]; then
             echo "::error::Missing Hugging Face token. Configure HF_TOKEN, HF_ACCESS_TOKEN, or HUGGINGFACEHUB_API_TOKEN secret."
             exit 1
           fi
-          git push --force "https://EdwBryan:${HF_TOKEN}@huggingface.co/spaces/EdwBryan/ai-genre-classifier" main
+          git push --force "https://EdwBryan:${TOKEN}@huggingface.co/spaces/EdwBryan/ai-genre-classifier" main
