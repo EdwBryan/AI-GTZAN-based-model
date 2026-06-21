@@ -22,5 +22,4 @@ jobs:
             echo "::error::Missing Hugging Face token. Configure HF_TOKEN, HF_ACCESS_TOKEN, or HUGGINGFACEHUB_API_TOKEN secret."
             exit 1
           fi
-          HF_REPO_URL="https://huggingface.co/spaces/EdwBryan/ai-genre-classifier"
-          git push --force "https://EdwBryan:${HF_TOKEN}@${HF_REPO_URL#https://}" main
+          git push --force "https://EdwBryan:${HF_TOKEN}@huggingface.co/spaces/EdwBryan/ai-genre-classifier" main
