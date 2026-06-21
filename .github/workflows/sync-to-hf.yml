@@ -1,0 +1,29 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: false
+
+      - name: Push to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_ACCESS_TOKEN: ${{ secrets.HF_ACCESS_TOKEN }}
+          HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HUGGINGFACEHUB_API_TOKEN }}
+        run: |
+          TOKEN="${HF_TOKEN:-${HF_ACCESS_TOKEN:-$HUGGINGFACEHUB_API_TOKEN}}"
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Missing Hugging Face token. Configure HF_TOKEN, HF_ACCESS_TOKEN, or HUGGINGFACEHUB_API_TOKEN secret."
+            exit 1
+          fi
+          git remote add hf "https://EdwBryan:${TOKEN}@huggingface.co/spaces/EdwBryan/ai-genre-classifier"
+          git push --force hf HEAD:main 2>&1 || git push --force hf HEAD:master 2>&1
