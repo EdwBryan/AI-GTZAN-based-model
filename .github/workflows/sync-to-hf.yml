@@ -25,5 +25,14 @@ jobs:
             echo "::error::Missing Hugging Face token secret. Please set one of: HF_TOKEN, HF_ACCESS_TOKEN, or HUGGINGFACEHUB_API_TOKEN."
             exit 1
           fi
-          git config --global url."https://EdwBryan:${TOKEN}@huggingface.co/".insteadOf "https://huggingface.co/"
-          git push --force https://huggingface.co/spaces/EdwBryan/ai-genre-classifier main
+          export TOKEN
+          cat > /tmp/hf-askpass.sh <<'EOF'
+          #!/usr/bin/env sh
+          case "$1" in
+            *Username*) echo "EdwBryan" ;;
+            *Password*) echo "$TOKEN" ;;
+          esac
+          EOF
+          chmod 700 /tmp/hf-askpass.sh
+          GIT_ASKPASS=/tmp/hf-askpass.sh GIT_TERMINAL_PROMPT=0 git push --force https://huggingface.co/spaces/EdwBryan/ai-genre-classifier main
+          rm -f /tmp/hf-askpass.sh
