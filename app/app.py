@@ -5,7 +5,7 @@ import pickle
 import json
 from pathlib import Path
 
-st.set_page_config(page_title="AI Genre Classifier", page_icon="🎵", layout="wide")
+st.set_page_config(page_title="AI Genre Classifier", page_icon=":musical_note:", layout="wide")
 
 ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
 APP_DIR = Path(__file__).parent
@@ -95,16 +95,19 @@ def pagina_inicio():
             <p>
                 Este proyecto utiliza <span class="highlight">Machine Learning</span> para clasificar
                 automáticamente géneros musicales a partir de archivos de audio.
-                El modelo <span class="highlight">Random Forest</span> (200 árboles de decisión)
-                extrae <span class="highlight">33 características</span> espectrales y rítmicas
+                Se evaluaron 4 modelos (Random Forest, SVM Calibrado, Stacking Ensemble, Red Neuronal)
+                y el mejor fue <span class="highlight">Stacking Ensemble</span> con <strong>75% de precisión</strong>,
+                combinando Random Forest (300 árboles) + SVM (RBF, C=10) + Logistic Regression.
+                Se extraen <span class="highlight">33 características</span> espectrales y rítmicas
                 de cada canción para predecir su género entre 10 categorías.
             </p>
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:1.2rem;">
                 <span class="tech-badge">Python</span>
                 <span class="tech-badge">Streamlit</span>
                 <span class="tech-badge">Scikit-learn</span>
+                <span class="tech-badge">TensorFlow</span>
                 <span class="tech-badge">Librosa</span>
-                <span class="tech-badge">Random Forest</span>
+                <span class="tech-badge">Stacking Ensemble</span>
                 <span class="tech-badge">Docker</span>
                 <span class="tech-badge">Hugging Face</span>
             </div>
@@ -115,13 +118,44 @@ def pagina_inicio():
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Géneros Soportados</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Generos Soportados</div>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:0.75rem;margin:-0.5rem 0 0.5rem 0;">Haz clic en cualquier genero para ver su precision y descripcion.</p>', unsafe_allow_html=True)
+
+    genre_info = {
+        'blues': 'Genero con estructura de 12 compases. Su precision es moderada, se confunde con jazz y country.',
+        'classical': 'El genero mas facil de identificar (100% precision). Su estructura orquestal y dinamica lo hacen unico.',
+        'country': 'Se confunde frecuentemente con rock y folk. Su ritmo y armonia vocal son sus claves distintivas.',
+        'disco': 'Ritmo de cuatro suelos con BPM alto. Se confunde con hip-hop por su energia percusiva.',
+        'hiphop': 'Basado en ritmos sampleados y voces. Comparte patrones ritmicos con el reggae y el pop.',
+        'jazz': 'Improvisacion y armonia compleja. Se confunde con classical por sus elementos instrumentales.',
+        'metal': 'Guitarras distorsionadas y alta energia. Es uno de los generos mas distintivos espectralmente.',
+        'pop': 'Estructura cancion comercial. Su variabilidad lo hace confundirse con dance y rock.',
+        'reggae': 'Ritmo sincopado caracteristico. Su patron ritmico es unico entre los 10 generos.',
+        'rock': 'El mas dificil de clasificar (40% precision). Su amplia variabilidad estilistica lo hace confundirse con muchos generos.',
+    }
+
+    class_acc = metadata.get("class_accuracy", {})
     genre_cols = st.columns(5)
     for i, genre in enumerate(genres):
-        genre_cols[i % 5].markdown(
-            f'<div class="genre-grid-item fade-in">{genre}</div>',
-            unsafe_allow_html=True
-        )
+        acc = class_acc.get(genre, 0)
+        with genre_cols[i % 5]:
+            btn_key = f"genre_btn_{genre}"
+            flipped = st.session_state.get(btn_key, False)
+            if not flipped:
+                if st.button(genre, key=f"gb_{genre}", use_container_width=True):
+                    st.session_state[btn_key] = True
+                    st.rerun()
+            else:
+                desc = genre_info.get(genre, "Genero musical del dataset GTZAN.")
+                st.markdown(f"""
+                    <div class="genre-card-back" style="position:relative;min-height:80px;display:flex;align-items:center;justify-content:center;padding:0.8rem;border-radius:14px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);cursor:pointer;font-size:0.72rem;line-height:1.4;color:#e2e8f0;text-align:center;"
+                         onclick="this.parentElement.querySelector('button').click()">
+                        <span>{desc}</span>
+                    </div>
+                """, unsafe_allow_html=True)
+                if st.button("← Volver", key=f"gb_back_{genre}", use_container_width=True):
+                    st.session_state[btn_key] = False
+                    st.rerun()
 
     st.markdown("""
         <div class="footer">
@@ -130,15 +164,15 @@ def pagina_inicio():
     """, unsafe_allow_html=True)
 
 def pagina_documentacion():
-    st.markdown('<div class="section-title">📚 Documentación del Proyecto</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:1.5rem;">Sección 7.1.1 — Información completa del proyecto de inteligencia artificial.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Documentación del Proyecto</div>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:1.5rem;">Información completa del proyecto de inteligencia artificial.</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>🎯 Objetivo del Proyecto</h3>
+                <h3>Objetivo del Proyecto</h3>
                 <p>Desarrollar un sistema de clasificación automática de géneros musicales utilizando
                 técnicas de <strong>Machine Learning</strong> que permita predecir el género de una
                 canción a partir de sus características espectrales y rítmicas.</p>
@@ -147,7 +181,7 @@ def pagina_documentacion():
 
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>📊 Dataset: GTZAN</h3>
+                <h3>Dataset: GTZAN</h3>
                 <p>El dataset <strong>GTZAN</strong> es el conjunto de referencia estándar para
                 clasificación de géneros musicales:</p>
                 <ul>
@@ -162,12 +196,12 @@ def pagina_documentacion():
 
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>🧠 Metodología</h3>
+                <h3>Metodología</h3>
                 <ol style="color:#b0b8cc;padding-left:1.2rem;">
                     <li><strong>Extracción de características</strong> con Librosa (MFCC, Chroma, Spectral, Tonnetz, Tempogram)</li>
                     <li><strong>Preprocesamiento</strong> con StandardScaler y LabelEncoder</li>
-                    <li><strong>Entrenamiento</strong> con Random Forest (200 árboles)</li>
-                    <li><strong>Evaluación</strong> 70/30 train/test, matriz de confusión, reporte por clase</li>
+                    <li><strong>Entrenamiento</strong> con 4 modelos: RF 500, SVM Calibrado, Stacking Ensemble (RF 300 + SVM + LogisticRegression), Red Neuronal (256-128-64)</li>
+                    <li><strong>Evaluación</strong> 70/30 train/test, matriz de confusión, curvas ROC/PR, reporte por clase, análisis de errores</li>
                     <li><strong>Despliegue</strong> en Hugging Face Spaces con Docker</li>
                 </ol>
             </div>
@@ -176,7 +210,7 @@ def pagina_documentacion():
     with col2:
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>🔬 Tecnologías Utilizadas</h3>
+                <h3>Tecnologías Utilizadas</h3>
                 <ul>
                     <li><strong>Python 3.13</strong> — Lenguaje principal</li>
                     <li><strong>Streamlit</strong> — Framework web interactivo</li>
@@ -192,29 +226,43 @@ def pagina_documentacion():
 
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>📈 Características Extraídas (33)</h3>
-                <ul>
-                    <li><strong>MFCC</strong> (Media, Std, Delta, Delta2)</li>
-                    <li><strong>Chroma</strong> (STFT, CQT, VQT)</li>
-                    <li><strong>Spectral</strong> (Centroid, Bandwidth, Rolloff, Contrast, Flatness)</li>
-                    <li><strong>Tonnetz</strong> (Tonal centroid features)</li>
-                    <li><strong>Tempogram</strong> (Temporal features)</li>
-                    <li><strong>RMS</strong> (Root Mean Square Energy)</li>
-                    <li><strong>ZCR</strong> (Zero Crossing Rate)</li>
-                    <li><strong>Mel Spectrogram</strong> (128 bands)</li>
-                    <li><strong>Tempo</strong> (BPM estimate)</li>
-                </ul>
+                <h3>Caracteristicas Extraidas (33 features)</h3>
+                <p style="color:#b0b8cc;font-size:0.85rem;margin-bottom:0.8rem;">
+                    Cada archivo de audio se convierte en un vector de 33 caracteristicas numericas que capturan
+                    diferentes aspectos del sonido: timbrica, armonia, espectro, ritmo y energia.
+                </p>
             </div>
         """, unsafe_allow_html=True)
 
+        st.markdown("""<div class="feature-table-wrap"><table class="feature-table">
+<tr><th>Feature en el CSV</th><th>Tipo</th><th>Descripcion</th></tr>
+<tr><td class="feat-name">mfcc_mean<br>mfcc_std</td><td class="feat-type">Timbrica</td><td class="feat-desc"><strong>Mel-Frequency Cepstral Coefficients (MFCCs):</strong> representan la envolvente espectral en una escala perceptual similar al oido humano. Son los descriptores mas utilizados en clasificacion de audio. Se calcularon 20 coeficientes y se resumieron en media y desviacion estandar sobre todo el fragmento.</td></tr>
+<tr><td class="feat-name">mfcc_delta_mean<br>mfcc_delta_std</td><td class="feat-type">Timbrica (dinamica)</td><td class="feat-desc"><strong>Delta de los MFCCs:</strong> representan la derivada temporal de primer orden de los MFCCs, capturando como cambia el timbre a lo largo del tiempo. Aportan informacion sobre la dinamica espectral del audio, complementando la informacion estatica de los MFCCs base.</td></tr>
+<tr><td class="feat-name">mfcc_delta2_mean<br>mfcc_delta2_std</td><td class="feat-type">Timbrica (aceleracion)</td><td class="feat-desc"><strong>Delta-delta de los MFCCs:</strong> representan la derivada temporal de segundo orden de los MFCCs, capturando la aceleracion del cambio timbrico. Junto a los deltas de primer orden, permiten modelar la evolucion temporal completa del espectro mel.</td></tr>
+<tr><td class="feat-name">chroma_stft_mean<br>chroma_stft_std</td><td class="feat-type">Armonica</td><td class="feat-desc"><strong>Chroma basado en STFT:</strong> representa la distribucion de energia entre las 12 notas de la escala cromatica occidental, calculada a partir del espectrograma de frecuencia lineal. Captura la tonalidad y estructura armonica del fragmento.</td></tr>
+<tr><td class="feat-name">chroma_cqt_mean<br>chroma_cqt_std</td><td class="feat-type">Armonica</td><td class="feat-desc"><strong>Chroma basado en CQT:</strong> similar al chroma STFT pero calculado sobre una representacion de frecuencia logaritmica, mas alineada con la percepcion musical. Ofrece mejor resolucion en frecuencias bajas y es especialmente sensible a la armonia de instrumentos de cuerda.</td></tr>
+<tr><td class="feat-name">chroma_vqt_mean<br>chroma_vqt_std</td><td class="feat-type">Armonica</td><td class="feat-desc"><strong>Chroma basado en VQT:</strong> una extension de la CQT con resolucion de frecuencia variable, que permite mayor flexibilidad en la representacion armonica. Complementa a los dos chroma anteriores al capturar variaciones armonicas con diferente granularidad frecuencial.</td></tr>
+<tr><td class="feat-name">spectral_centroid_mean<br>spectral_centroid_std</td><td class="feat-type">Espectral</td><td class="feat-desc"><strong>Centroide espectral:</strong> indica la frecuencia en la que se concentra el centro de masa del espectro. Valores altos corresponden a sonidos mas brillantes o agudos; valores bajos indican sonidos mas oscuros o graves. Es un indicador directo del brillo timbrico percibido.</td></tr>
+<tr><td class="feat-name">spectral_bandwidth_mean<br>spectral_bandwidth_std</td><td class="feat-type">Espectral</td><td class="feat-desc"><strong>Ancho de banda espectral:</strong> mide cuan disperso o concentrado esta el espectro alrededor del centroide. Generos con mayor riqueza armonica e instrumentacion densa presentan mayor ancho de banda, mientras que generos minimalistas o con instrumentos solistas tienden a valores menores.</td></tr>
+<tr><td class="feat-name">spectral_rolloff_mean<br>spectral_rolloff_std</td><td class="feat-type">Espectral</td><td class="feat-desc"><strong>Roll-off espectral:</strong> la frecuencia por debajo de la cual se concentra el 85% de la energia total del espectro. Permite identificar si un audio tiene mayor concentracion de energia en frecuencias altas (generos brillantes como el metal) o bajas (generos como el blues o el reggae).</td></tr>
+<tr><td class="feat-name">spectral_contrast_mean<br>spectral_contrast_std</td><td class="feat-type">Espectral</td><td class="feat-desc"><strong>Contraste espectral:</strong> mide la diferencia de amplitud entre picos y valles del espectro en multiples bandas de frecuencia. Captura la textura sonora del audio: generos con alta presencia percusiva presentan mayor contraste, mientras que generos con texturas suaves presentan menor contraste.</td></tr>
+<tr><td class="feat-name">spectral_flatness_mean<br>spectral_flatness_std</td><td class="feat-type">Espectral</td><td class="feat-desc"><strong>Planitud espectral:</strong> mide que tan uniforme o plano es el espectro de frecuencias. Un valor cercano a 1 indica un espectro similar al ruido blanco (sin picos dominantes), mientras que valores bajos indican la presencia de tonos o notas claras. Es util para distinguir generos tonales de generos percusivos o ruidosos.</td></tr>
+<tr><td class="feat-name">tonnetz_mean<br>tonnetz_std</td><td class="feat-type">Armonica</td><td class="feat-desc"><strong>Tonnetz (red tonal):</strong> representacion de las relaciones armonicas entre notas basada en la teoria musical clasica europea. Captura distancias tonales y progresiones armonicas caracteristicas, siendo especialmente discriminativo para generos con estructuras armonicas complejas como el jazz y el blues.</td></tr>
+<tr><td class="feat-name">tempogram_mean<br>tempogram_std</td><td class="feat-type">Ritmica</td><td class="feat-desc"><strong>Tempograma:</strong> representacion de la periodicidad ritmica del audio a lo largo del tiempo, calculada a partir de la funcion de novedad de onset. A diferencia del tempo escalar, el tempograma captura la variabilidad ritmica dentro del fragmento, siendo util para distinguir generos con patrones ritmicos estables de aquellos con tempo fluctuante.</td></tr>
+<tr><td class="feat-name">rms_mean<br>rms_std</td><td class="feat-type">Energetica</td><td class="feat-desc"><strong>Root Mean Square (RMS):</strong> energia promedio de la senal de audio, directamente relacionada con el volumen percibido. Generos de alta energia como el metal o el hip-hop presentan valores RMS elevados, mientras que generos acusticos o clasicos suelen tener valores menores. La desviacion estandar refleja la dinamica de volumen a lo largo del fragmento.</td></tr>
+<tr><td class="feat-name">zero_crossing_rate_mean<br>zero_crossing_rate_std</td><td class="feat-type">Temporal</td><td class="feat-desc"><strong>Tasa de cruce por cero (ZCR):</strong> frecuencia con la que la senal cambia de signo por unidad de tiempo. Es un indicador de la percusividad o ruidosidad del audio. Generos con alta presencia de bateria, ruido o voces no entonadas tienden a presentar tasas de cruce mas altas que generos melodicos o instrumentales.</td></tr>
+<tr><td class="feat-name">mel_spec_mean<br>mel_spec_std</td><td class="feat-type">Espectral</td><td class="feat-desc"><strong>Espectrograma mel:</strong> representacion de la energia del espectro de frecuencias en escala mel (perceptual), promediada sobre el eje temporal. Es una de las representaciones mas completas del contenido frecuencial de un audio y sirve como base para los MFCCs. Su media y desviacion estandar resumen la distribucion global de energia en el dominio mel.</td></tr>
+<tr><td class="feat-name">tempo</td><td class="feat-type">Ritmica</td><td class="feat-desc"><strong>Tempo estimado en BPM:</strong> valor escalar que representa la velocidad ritmica dominante del fragmento, calculado mediante el algoritmo de beat tracking de librosa. A diferencia del tempograma, este valor resume el ritmo global en un unico numero. Generos como el disco, el hip-hop y el metal tienen rangos de BPM muy caracteristicos y diferenciados.</td></tr>
+</table></div>""", unsafe_allow_html=True)
+
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>🏗️ Arquitectura del Sistema</h3>
+                <h3>Arquitectura del Sistema</h3>
                 <p>El sistema sigue una arquitectura de pipeline de Machine Learning:</p>
                 <ul>
                     <li><strong>Entrada:</strong> Archivo de audio (WAV/MP3)</li>
                     <li><strong>Preprocesamiento:</strong> Carga con Librosa → Extracción de features</li>
-                    <li><strong>Inferencia:</strong> StandardScaler → Random Forest → Predicción</li>
+                    <li><strong>Inferencia:</strong> StandardScaler → Stacking Ensemble (RF + SVM + LogisticRegression) → Predicción</li>
                     <li><strong>Salida:</strong> Género predicho + probabilidades + visualizaciones</li>
                 </ul>
             </div>
@@ -229,62 +277,60 @@ def pagina_documentacion():
     """, unsafe_allow_html=True)
 
 def pagina_codigo():
-    st.markdown('<div class="section-title">💻 Código del Sistema</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Sección 7.1.2 — Código fuente del entrenamiento del modelo y del sistema completo.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Código del Sistema</div>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Código fuente del entrenamiento del modelo y del sistema completo.</p>', unsafe_allow_html=True)
 
-    with st.expander("📁 Estructura del Proyecto", expanded=True):
-        st.markdown("""
-        <pre style="background:rgba(15,12,41,0.6);padding:1.2rem;border-radius:12px;border:1px solid rgba(124,58,237,0.1);color:#b0b8cc;font-size:0.85rem;line-height:1.6;">
-        <strong style="color:#a78bfa;">AI-GTZAN-based-model/</strong>
-        ├── <strong style="color:#fbbf24;">IA-Model.ipynb</strong>      # Entrenamiento del modelo (Jupyter)
-        ├── <strong style="color:#fbbf24;">ETL.ipynb</strong>           # Extracción y limpieza de datos
-        ├── <strong style="color:#a78bfa;">app/</strong>
-        │   ├── train_and_save.py   # Entrenamiento del modelo (script)
-        │   ├── utils.py            # Extracción de features de audio
-        │   ├── app.py              # Aplicación Streamlit (multi-página)
-        │   ├── style.css           # Estilos y tema visual
-        │   ├── requirements.txt    # Dependencias Python
-        │   └── artifacts/          # Modelo y métricas (generados en build)
-        ├── Dockerfile              # Configuración del contenedor
-        ├── gtzan_selected_features.csv  # Dataset procesado
-        └── README.md
-        </pre>
+    st.markdown("### Estructura del Proyecto")
+    st.markdown("""
+        <div class="tree-view">AI-GTZAN-based-model/
+├── <span class="tree-file">IA-Model.ipynb</span>      Entrenamiento del modelo (Jupyter)
+├── <span class="tree-file">ETL.ipynb</span>           Extraccion y limpieza de datos
+├── <span class="tree-dir">app/</span>
+│   ├── train_and_save.py   Entrenamiento del modelo (script)
+│   ├── utils.py            Extraccion de features de audio
+│   ├── app.py              Aplicacion Streamlit (multi-pagina)
+│   ├── style.css           Estilos y tema visual
+│   ├── requirements.txt    Dependencias Python
+│   └── artifacts/          Modelo y metricas (generados en build)
+├── Dockerfile              Configuracion del contenedor
+├── gtzan_selected_features.csv  Dataset procesado
+└── README.md</div>
         """, unsafe_allow_html=True)
 
-    st.info("📓 Los notebooks contienen el proceso completo de entrenamiento del modelo (ETL + Random Forest).")
-    st.markdown("### 📓 Notebooks de Entrenamiento")
-    nb_tab = st.selectbox(
+    st.info("Los notebooks contienen el proceso completo de entrenamiento del modelo (ETL + 4 modelos de clasificacion).")
+    st.markdown("### Notebooks de Entrenamiento")
+    nb_tab = st.radio(
         "Selecciona un notebook:",
         list(NOTEBOOK_FILES.keys()),
+        horizontal=True,
         label_visibility="collapsed",
         key="nb_selector"
     )
     nb_path = NOTEBOOK_FILES.get(nb_tab)
     if nb_path and nb_path.exists():
-        import json, re
-        raw = nb_path.read_text(encoding="utf-8")
-        nb = json.loads(raw)
-        cells = nb.get("cells", [])
-        md_cells = [c for c in cells if c.get("cell_type") == "markdown"]
-        code_cells = [c for c in cells if c.get("cell_type") == "code"]
-        n_code = len(code_cells)
-        st.caption(f"📄 {nb_tab} — {n_code} celdas de código")
-        tab_labels = ["📝 Resumen"] + [f"📎 Celda {i+1}" for i in range(min(n_code, 20))]
-        tabs = st.tabs(tab_labels)
-        with tabs[0]:
-            for c in md_cells[:10]:
-                src = "".join(c.get("source", []))
-                st.markdown(src)
-            st.markdown(f"*Total: {n_code} celdas de código en {nb_tab}*")
-        for i in range(min(n_code, 20)):
-            with tabs[i+1]:
+        try:
+            import json
+            raw = nb_path.read_text(encoding="utf-8")
+            nb = json.loads(raw)
+            cells = nb.get("cells", [])
+            md_cells = [c for c in cells if c.get("cell_type") == "markdown"]
+            code_cells = [c for c in cells if c.get("cell_type") == "code"]
+            n_code = len(code_cells)
+            st.caption(f"{nb_tab} — {n_code} celdas de codigo")
+            for i in range(n_code):
                 src = "".join(code_cells[i].get("source", []))
-                st.code(src, language="python", line_numbers=True)
+                with st.expander(f"Celda {i+1}" + (f" — {src.split(chr(10))[0][:60].strip()}" if src.strip() else "")):
+                    st.code(src, language="python", line_numbers=True)
+        except Exception as e:
+            st.error(f"Error al cargar notebook: {e}")
+    else:
+        st.warning("No se encontro el archivo del notebook.")
 
-    st.markdown("### 🐍 Scripts del Sistema")
-    code_tab = st.selectbox(
+    st.markdown("### Scripts del Sistema")
+    code_tab = st.radio(
         "Selecciona un archivo:",
         list(CODE_FILES.keys()) + list(ROOT_FILES.keys()),
+        horizontal=True,
         label_visibility="collapsed",
         key="code_selector"
     )
@@ -293,7 +339,7 @@ def pagina_codigo():
         content = file_path.read_text(encoding="utf-8")
         lang = "python" if code_tab.endswith(".py") else "dockerfile"
         lines = content.count("\n") + 1
-        st.caption(f"📄 {code_tab} — {lines} líneas")
+        st.caption(f"{code_tab} — {lines} lineas")
         with st.container():
             st.code(content, language=lang, line_numbers=True)
 
@@ -301,7 +347,7 @@ def pagina_codigo():
     st.markdown("""
         <div class="doc-card">
             <p style="font-size:0.85rem;color:#6b7280;">
-                💡 El código completo está disponible en
+                El codigo completo esta disponible en
                 <a href="https://github.com/EdwBryan/AI-GTZAN-based-model" target="_blank" style="color:#a78bfa;">
                 GitHub.com/EdwBryan/AI-GTZAN-based-model</a>
             </p>
@@ -315,8 +361,8 @@ def pagina_codigo():
     """, unsafe_allow_html=True)
 
 def pagina_pruebas():
-    st.markdown('<div class="section-title">🧪 Ejecución y Pruebas del Sistema</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Sección 7.1.3 — Resultados de la evaluación de 4 modelos, pruebas del sistema y análisis de errores.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Ejecución y Pruebas del Sistema</div>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Resultados de la evaluación de 4 modelos, pruebas del sistema y análisis de errores.</p>', unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Comparación de Modelos</div>', unsafe_allow_html=True)
     comp_df = pd.DataFrame([
@@ -324,11 +370,11 @@ def pagina_pruebas():
         for k, v in sorted(comparison.items(), key=lambda x: x[1]["accuracy"], reverse=True)
     ])
     st.dataframe(comp_df, hide_index=True, use_container_width=True)
-    st.markdown(f'<p style="color:#a78bfa;font-weight:600;">✅ Mejor: Stacking Ensemble ({metadata["test_accuracy"]:.1%}) — Combina RF (300) + SVM (RBF, C=10) + LogisticRegression</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="color:#a78bfa;font-weight:600;">Mejor: Stacking Ensemble ({metadata["test_accuracy"]:.1%}) - Combina RF (300) + SVM (RBF, C=10) + LogisticRegression</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown('<div class="doc-card fade-in"><h3>📊 Métricas Globales (Stacking)</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="doc-card fade-in"><h3>Metricas Globales (Stacking)</h3></div>', unsafe_allow_html=True)
         st.markdown(f"""
             <div class="feature-card">
                 <div class="feature-name">Precisión (Accuracy)</div>
@@ -353,7 +399,7 @@ def pagina_pruebas():
         """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="doc-card fade-in"><h3>🎯 Precisión por Género (Stacking)</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="doc-card fade-in"><h3>Precision por Genero (Stacking)</h3></div>', unsafe_allow_html=True)
         class_acc_df = pd.DataFrame([
             {"Género": g.capitalize(), "Precisión": f"{v:.1%}"}
             for g, v in sorted(metadata["class_accuracy"].items(), key=lambda x: x[1], reverse=True)
@@ -364,12 +410,12 @@ def pagina_pruebas():
         peor_genre = min(metadata["class_accuracy"], key=metadata["class_accuracy"].get)
         st.markdown(f"""
             <div style="margin-top:0.5rem;padding:0.8rem;background:rgba(30,27,75,0.3);border-radius:12px;">
-                <p style="color:#b0b8cc;font-size:0.85rem;">
-                    ✅ Mejor: <strong style="color:#4ade80;">{mejor_genre.capitalize()}</strong> ({metadata['class_accuracy'][mejor_genre]:.1%})
-                </p>
-                <p style="color:#b0b8cc;font-size:0.85rem;">
-                    ⚠️ Peor: <strong style="color:#fbbf24;">{peor_genre.capitalize()}</strong> ({metadata['class_accuracy'][peor_genre]:.1%})
-                </p>
+                    <p style="color:#b0b8cc;font-size:0.85rem;">
+                        Mejor: <strong style="color:#4ade80;">{mejor_genre.capitalize()}</strong> ({metadata['class_accuracy'][mejor_genre]:.1%})
+                    </p>
+                    <p style="color:#b0b8cc;font-size:0.85rem;">
+                        Peor: <strong style="color:#fbbf24;">{peor_genre.capitalize()}</strong> ({metadata['class_accuracy'][peor_genre]:.1%})
+                    </p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -411,7 +457,7 @@ def pagina_pruebas():
             else:
                 st.info("No se encontraron confusiones significativas (>=2).")
 
-    st.markdown('<div class="section-title">Importancia de Características (Random Forest 500 árboles)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Importancia de Caracteristicas (Random Forest 500 arboles)</div>', unsafe_allow_html=True)
     top_n = min(15, len(importance_df))
     top_feat = importance_df.head(top_n)
     fig2, ax2 = plt.subplots(figsize=(10, 6))
@@ -432,7 +478,7 @@ def pagina_pruebas():
         bar.set_linewidth(0.5)
     st.pyplot(fig2)
 
-    st.markdown('<div class="section-title">Reporte de Clasificación (Stacking)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Reporte de Clasificacion (Stacking)</div>', unsafe_allow_html=True)
     report = metadata.get("classification_report", {})
     report_df = pd.DataFrame(report).T
     if "accuracy" in report_df.index:
@@ -442,10 +488,10 @@ def pagina_pruebas():
         "f1-score": "{:.2%}", "support": "{:.0f}"
     }), use_container_width=True)
 
-    st.markdown('<div class="section-title">Prueba Rápida de Clasificación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Prueba Rapida de Clasificacion</div>', unsafe_allow_html=True)
     st.markdown("""
         <p style="color:#8b9dc3;font-size:0.9rem;">
-            Ve a la pestaña <strong style="color:#a78bfa;">🎵 Clasificador</strong> para probar el modelo
+            Ve a la pestana <strong style="color:#a78bfa;">Clasificador</strong> para probar el modelo
             con tus propios archivos de audio.
         </p>
     """, unsafe_allow_html=True)
@@ -457,13 +503,26 @@ def pagina_pruebas():
     """, unsafe_allow_html=True)
 
 def pagina_clasificador():
-    st.markdown('<div class="section-title">🎵 Clasificador de Géneros Musicales</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:0.5rem;">Sección 7.2 — Sistema de predicción de géneros musicales. Sube un archivo de audio para clasificarlo.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Clasificador de Géneros Musicales</div>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:0.5rem;">Sube un archivo de audio para clasificarlo entre 10 géneros musicales.</p>', unsafe_allow_html=True)
 
-    st.info("📤 Formatos soportados: WAV, MP3, FLAC, OGG, M4A — Duración recomendada: 30 segundos")
+    st.info("Formatos: WAV, MP3, FLAC, OGG, M4A - Duracion recomendada: 30 segundos")
     from utils import extract_features_from_audio, load_audio
 
-    uploaded = st.file_uploader("Selecciona un archivo de audio", type=["wav", "mp3", "flac", "ogg", "m4a"])
+    st.markdown("""
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem 0;">
+            <div style="margin-bottom:1rem;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                </svg>
+            </div>
+            <p style="color:#8b9dc3;font-size:0.85rem;text-align:center;margin-bottom:1rem;">
+                Arrastra tu archivo de audio o haz clic para seleccionar
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    uploaded = st.file_uploader("Selecciona un archivo de audio", type=["wav", "mp3", "flac", "ogg", "m4a"], label_visibility="collapsed")
 
     if uploaded is not None:
         with st.spinner("Analizando audio y extrayendo características..."):
@@ -511,7 +570,7 @@ def pagina_clasificador():
                     st.subheader("Distribución de Probabilidades")
                     st.bar_chart(proba_df.set_index("Género"), height=400, color="#7c3aed")
 
-                with st.expander("🔬 Ver características extraídas (33 features)"):
+                with st.expander("Ver caracteristicas extraidas (33 features)"):
                     feat_df = pd.DataFrame([feat]).T.reset_index()
                     feat_df.columns = ["Característica", "Valor"]
                     feat_df["Valor"] = feat_df["Valor"].round(4)
@@ -520,12 +579,12 @@ def pagina_clasificador():
             except Exception as e:
                 import traceback
                 st.error(f"Error al procesar el audio: {e}")
-                with st.expander("🔍 Ver detalle del error"):
+                with st.expander("Ver detalle del error"):
                     st.code(traceback.format_exc(), language="text")
                 st.markdown("""
                     <div class="doc-card" style="margin-top:1rem;">
                         <p style="color:#b0b8cc;font-size:0.9rem;">
-                            💡 Sugerencia: Verifica que el archivo sea un audio válido.
+                            Sugerencia: Verifica que el archivo sea un audio valido.
                             Si el problema persiste, intenta con un archivo WAV de 30 segundos. Los formatos
                             MP3 requieren ffmpeg (debe estar instalado en el servidor).
                         </p>
@@ -535,11 +594,11 @@ def pagina_clasificador():
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
         <div class="doc-card" style="text-align:center;">
-            <h3>🎯 ¿Cómo funciona?</h3>
+            <h3>Como funciona?</h3>
             <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;margin-top:1rem;">
                 <div class="step-indicator"><span class="step-number">1</span><span class="step-content"><strong>Carga</strong> tu archivo de audio</span></div>
                 <div class="step-indicator"><span class="step-number">2</span><span class="step-content"><strong>Extraemos</strong> 33 características</span></div>
-                <div class="step-indicator"><span class="step-number">3</span><span class="step-content"><strong>Predecimos</strong> el género con Random Forest</span></div>
+                <div class="step-indicator"><span class="step-number">3</span><span class="step-content"><strong>Predecimos</strong> el género con Stacking Ensemble</span></div>
                 <div class="step-indicator"><span class="step-number">4</span><span class="step-content"><strong>Visualizas</strong> probabilidades y features</span></div>
             </div>
         </div>
@@ -552,7 +611,7 @@ def pagina_clasificador():
     """, unsafe_allow_html=True)
 
 def pagina_modelo():
-    st.markdown(f'<div class="section-title">📊 Modelo — Stacking Ensemble ({metadata["test_accuracy"]:.0%} accuracy)</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title">Modelo - Stacking Ensemble ({metadata["test_accuracy"]:.0%} accuracy)</div>', unsafe_allow_html=True)
     st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Detalles técnicos del modelo de clasificación entrenado. Se evaluaron 4 modelos: el Stacking Ensemble es el mejor con un 75% de accuracy.</p>', unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Comparación de Modelos</div>', unsafe_allow_html=True)
@@ -569,7 +628,7 @@ def pagina_modelo():
         c1.markdown(f'{row["Modelo"]}')
         c2.markdown(f'**{row["Accuracy"]}**' if "Stacking" in row["Modelo"] else row["Accuracy"])
         c3.markdown(f'{row["CV (k=5)"]}')
-    st.markdown(f'<p style="color:#a78bfa;font-weight:600;">✅ Mejor modelo: Stacking Ensemble ({metadata["test_accuracy"]:.1%})</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="color:#a78bfa;font-weight:600;">Mejor modelo: Stacking Ensemble ({metadata["test_accuracy"]:.1%})</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns([1, 1])
 
@@ -603,7 +662,7 @@ def pagina_modelo():
 
         st.markdown("""
             <div class="doc-card" style="margin-top:0.5rem;">
-                <h3 style="font-size:0.9rem;">⚙️ Otros Modelos Evaluados</h3>
+                <h3 style="font-size:0.9rem;">Otros Modelos Evaluados</h3>
                 <ul style="font-size:0.85rem;">
                     <li><strong>Random Forest:</strong> 500 árboles, max_depth=None</li>
                     <li><strong>SVM Calibrado:</strong> kernel RBF, C=10, gamma='scale'</li>
@@ -613,7 +672,7 @@ def pagina_modelo():
         """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="doc-card fade-in" style="padding:1rem;"><h3 style="font-size:1rem;">🎯 Precisión por Género (Stacking)</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="doc-card fade-in" style="padding:1rem;"><h3 style="font-size:1rem;">Precision por Genero (Stacking)</h3></div>', unsafe_allow_html=True)
         class_acc_df = pd.DataFrame([
             {"Género": g.capitalize(), "Precisión": f"{v:.1%}"}
             for g, v in sorted(metadata["class_accuracy"].items(), key=lambda x: x[1], reverse=True)
@@ -622,7 +681,7 @@ def pagina_modelo():
 
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-    cm_tab, fi_tab, cr_tab, roc_tab = st.tabs(["📊 Matriz de Confusión", "📈 Importancia de Features", "📋 Reporte de Clasificación", "📉 Curvas ROC / PR"])
+    cm_tab, fi_tab, cr_tab, roc_tab = st.tabs(["Matriz de Confusion", "Importancia de Features", "Reporte de Clasificacion", "Curvas ROC / PR"])
 
     with cm_tab:
         if "matrix" in cm_best and "labels" in cm_best:
@@ -765,25 +824,25 @@ def pagina_modelo():
     """, unsafe_allow_html=True)
 
 def pagina_informe():
-    st.markdown('<div class="section-title">📄 Informe del Proyecto</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Resumen completo, reportes descargables y documentación del sistema.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Informe del Proyecto</div>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Resumen completo, reportes descargables y documentacion del sistema.</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>📋 Resumen Ejecutivo</h3>
-                <p><strong>AI Genre Classifier</strong> es un sistema de clasificación de géneros
-                musicales basado en <strong>Random Forest</strong>. El modelo alcanza una precisión
-                del <strong>{:.1%}</strong> en el dataset GTZAN (10 géneros, 1000 muestras).
-                El sistema está desplegado en Hugging Face Spaces usando Docker.</p>
+                <h3>Resumen Ejecutivo</h3>
+                <p><strong>AI Genre Classifier</strong> es un sistema de clasificacion de generos
+                musicales basado en <strong>Stacking Ensemble</strong> (RF 300 + SVM + LogisticRegression).
+                El modelo alcanza una precision del <strong>{:.1%}</strong> en el dataset GTZAN
+                (10 generos, 1000 muestras). El sistema esta desplegado en Hugging Face Spaces usando Docker.</p>
             </div>
         """.format(metadata["test_accuracy"]), unsafe_allow_html=True)
 
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>📈 Rendimiento</h3>
+                <h3>Rendimiento</h3>
         """, unsafe_allow_html=True)
         st.metric("Precisión Global", f"{metadata['test_accuracy']:.1%}")
         st.metric("Muestras Totales", metadata["n_samples"])
@@ -793,12 +852,12 @@ def pagina_informe():
     with col2:
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>📥 Descargables</h3>
-                <p style="margin-bottom:1rem;">Descarga los artefactos del modelo para uso offline o análisis adicional.</p>
+                <h3>Descargables</h3>
+                <p style="margin-bottom:1rem;">Descarga los artefactos del modelo para uso offline o analisis adicional.</p>
         """, unsafe_allow_html=True)
 
         st.download_button(
-            "📊 Importancia de Características (CSV)",
+            "Importancia de Caracteristicas (CSV)",
             importance_df.to_csv(index=False),
             "feature_importance.csv",
             "text/csv",
@@ -807,7 +866,7 @@ def pagina_informe():
 
         meta_json = json.dumps(metadata, indent=2, ensure_ascii=False)
         st.download_button(
-            "📋 Metadata del Modelo (JSON)",
+            "Metadata del Modelo (JSON)",
             meta_json,
             "metadata.json",
             "application/json",
@@ -816,7 +875,7 @@ def pagina_informe():
 
         cm_json = json.dumps(cm_best, indent=2, ensure_ascii=False)
         st.download_button(
-            "🔢 Matriz de Confusión (JSON)",
+            "Matriz de Confusion (JSON)",
             cm_json,
             "confusion_matrix.json",
             "application/json",
@@ -829,8 +888,8 @@ def pagina_informe():
         <div class="doc-card fade-in">
             <div style="display:flex;flex-wrap:wrap;gap:0.8rem;justify-content:center;">
                 <div class="step-indicator"><span class="step-number">1</span><span class="step-content"><strong>Dataset</strong> GTZAN → Features CSV</span></div>
-                <div class="step-indicator"><span class="step-number">2</span><span class="step-content"><strong>Entrenamiento</strong> Random Forest (200 trees)</span></div>
-                <div class="step-indicator"><span class="step-number">3</span><span class="step-content"><strong>Evaluación</strong> Métricas y matrices</span></div>
+                <div class="step-indicator"><span class="step-number">2</span><span class="step-content"><strong>Entrenamiento</strong> 4 modelos (RF, SVM, Stacking, NN)</span></div>
+                <div class="step-indicator"><span class="step-number">3</span><span class="step-content"><strong>Evaluacion</strong> Metricas y matrices</span></div>
                 <div class="step-indicator"><span class="step-number">4</span><span class="step-content"><strong>Contenedor</strong> Docker + dependencias</span></div>
                 <div class="step-indicator"><span class="step-number">5</span><span class="step-content"><strong>Deploy</strong> Hugging Face Spaces</span></div>
             </div>
@@ -840,20 +899,20 @@ def pagina_informe():
     st.markdown('<div class="section-title">Despliegue (Deploy)</div>', unsafe_allow_html=True)
     st.markdown("""
         <div class="doc-card fade-in">
-            <h3>🌐 Plataformas de Despliegue</h3>
+            <h3>Plataformas de Despliegue</h3>
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.8rem;">
-                <span class="platform-badge github">🐙 GitHub</span>
-                <span class="platform-badge hf">🤗 Hugging Face Spaces</span>
-                <span class="platform-badge docker">🐳 Docker</span>
+                <span class="platform-badge github"><svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="vertical-align:middle;margin-right:4px;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg> GitHub</span>
+                <span class="platform-badge hf"><svg width="16" height="16" viewBox="0 0 24 24" fill="#a78bfa" style="vertical-align:middle;margin-right:4px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17h-2v-2h2v2zm0-4h-2V7h2v8z"/></svg> Hugging Face Spaces</span>
+                <span class="platform-badge docker"><svg width="16" height="16" viewBox="0 0 24 24" fill="#0db7ed" style="vertical-align:middle;margin-right:4px;"><path d="M20.8 10.4c-.4-.4-1.2-.6-2-.6h-1.2c-.2 0-.4-.2-.4-.4V8.4c0-.2-.2-.4-.4-.4h-1.2c-.2 0-.4.2-.4.4v1.2c0 .2.2.4.4.4h1.2c.2 0 .4.2.4.4v.6c0 .8-.2 1.4-.6 1.8-.2.2-.4.2-.4.4s.2.4.4.4c.8 0 1.6-.4 2.2-1 .6-.6.8-1.4.8-2.2 0-.2 0-.4-.2-.4zM12 10.4h-1.2c-.2 0-.4.2-.4.4v1.2c0 .2.2.4.4.4H12c.2 0 .4-.2.4-.4v-1.2c0-.2-.2-.4-.4-.4zm-2.8 0H8c-.2 0-.4.2-.4.4v1.2c0 .2.2.4.4.4h1.2c.2 0 .4-.2.4-.4v-1.2c0-.2-.2-.4-.4-.4zm-2.8 0H5.2c-.2 0-.4.2-.4.4v1.2c0 .2.2.4.4.4h1.2c.2 0 .4-.2.4-.4v-1.2c0-.2-.2-.4-.4-.4zm0-2.4H5.2c-.2 0-.4.2-.4.4v1.2c0 .2.2.4.4.4h1.2c.2 0 .4-.2.4-.4V8.4c0-.2-.2-.4-.4-.4zm2.8 0H8c-.2 0-.4.2-.4.4v1.2c0 .2.2.4.4.4h1.2c.2 0 .4-.2.4-.4V8.4c0-.2-.2-.4-.4-.4zm7.6-2H15.2c-.2 0-.4.2-.4.4v1.2c0 .2.2.4.4.4h1.2c.2 0 .4-.2.4-.4V6.4c0-.2-.2-.4-.4-.4zM12 6H5.2c-.2 0-.4.2-.4.4v1.2c0 .2.2.4.4.4H12c.2 0 .4-.2.4-.4V6.4c0-.2-.2-.4-.4-.4z"/></svg> Docker</span>
             </div>
             <div style="margin-top:1rem;">
-                <p><strong>App en producción:</strong></p>
+                <p><strong>App en produccion:</strong></p>
                 <a href="https://edwbryan-ai-genre-classifier.hf.space" target="_blank" style="color:#a78bfa;font-size:1.1rem;">
                     edwbryan-ai-genre-classifier.hf.space ↗
                 </a>
             </div>
             <div style="margin-top:0.8rem;">
-                <p><strong>Código fuente:</strong></p>
+                <p><strong>Codigo fuente:</strong></p>
                 <a href="https://github.com/EdwBryan/AI-GTZAN-based-model" target="_blank" style="color:#a78bfa;">
                     github.com/EdwBryan/AI-GTZAN-based-model ↗
                 </a>
@@ -868,18 +927,22 @@ def pagina_informe():
     """, unsafe_allow_html=True)
 
 pages = [
-    st.Page(pagina_inicio, title="Inicio", icon="🏠"),
-    st.Page(pagina_documentacion, title="Documentación", icon="📚"),
-    st.Page(pagina_codigo, title="Código del Sistema", icon="💻"),
-    st.Page(pagina_pruebas, title="Pruebas del Sistema", icon="🧪"),
-    st.Page(pagina_clasificador, title="Clasificador", icon="🎵"),
-    st.Page(pagina_modelo, title="Modelo", icon="📊"),
-    st.Page(pagina_informe, title="Informe", icon="📄"),
+    st.Page(pagina_inicio, title="Inicio"),
+    st.Page(pagina_documentacion, title="Documentación"),
+    st.Page(pagina_codigo, title="Código del Sistema"),
+    st.Page(pagina_pruebas, title="Pruebas del Sistema"),
+    st.Page(pagina_clasificador, title="Clasificador"),
+    st.Page(pagina_modelo, title="Modelo"),
+    st.Page(pagina_informe, title="Informe"),
 ]
 
 st.sidebar.markdown("""
     <div class="sidebar-logo">
-        <div class="logo-icon">🎵</div>
+        <div class="logo-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+        </div>
         <div class="logo-title">AI Genre Classifier</div>
         <div class="logo-sub">Bryan Edwards · UPAO</div>
     </div>

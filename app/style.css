@@ -292,9 +292,6 @@
     margin: 2rem 0 1.2rem;
     padding-bottom: 0.6rem;
     border-bottom: 2px solid rgba(124, 58, 237, 0.12);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 .genre-grid-item {
@@ -635,4 +632,260 @@ pre {
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.2), transparent);
     margin: 1.5rem 0;
+}
+
+/* Fix table layout wobble */
+[data-testid="stDataFrame"] {
+    overflow-x: hidden !important;
+}
+[data-testid="stDataFrame"] table {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+[data-testid="stDataFrame"] th,
+[data-testid="stDataFrame"] td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.stDataFrame div[data-testid="stDataFrame"] > div {
+    max-width: 100% !important;
+}
+
+/* Custom file uploader - squared, centered, elegant */
+.stFileUploader {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+}
+.stFileUploader > div {
+    width: 340px !important;
+    height: 340px !important;
+    border: 2px dashed rgba(124, 58, 237, 0.35) !important;
+    border-radius: 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(124, 58, 237, 0.04) !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    padding: 1.5rem !important;
+}
+.stFileUploader > div:hover {
+    border-color: rgba(124, 58, 237, 0.6) !important;
+    background: rgba(124, 58, 237, 0.08) !important;
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.08);
+}
+.stFileUploader > div > div:first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+[data-testid="stFileUploaderDropzoneIcon"] {
+    display: none !important;
+}
+.stFileUploader [data-testid="stMarkdownContainer"] p {
+    text-align: center;
+    font-size: 0.85rem;
+}
+.stFileUploader small {
+    display: block;
+    text-align: center;
+    margin-top: 0.3rem;
+    opacity: 0.6;
+}
+
+/* Genre card - flip animation */
+.genre-card-container {
+    perspective: 1000px;
+    height: 100px;
+    margin: 0.3rem;
+}
+.genre-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.5s ease;
+    transform-style: preserve-3d;
+    cursor: pointer;
+}
+.genre-card-inner.flipped {
+    transform: rotateY(180deg);
+}
+.genre-card-front, .genre-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.8rem;
+    text-align: center;
+}
+.genre-card-front {
+    background: rgba(124, 58, 237, 0.06);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    color: #c4b5fd;
+    text-transform: capitalize;
+}
+.genre-card-front:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(124, 58, 237, 0.3);
+    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.1);
+}
+.genre-card-back {
+    background: rgba(124, 58, 237, 0.12);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    color: #e2e8f0;
+    transform: rotateY(180deg);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+/* Tree view for project structure */
+.tree-view {
+    background: rgba(15,12,41,0.6);
+    padding: 1.2rem;
+    border-radius: 12px;
+    border: 1px solid rgba(124,58,237,0.1);
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    color: #b0b8cc;
+    white-space: pre;
+    overflow-x: auto;
+}
+.tree-view .tree-dir {
+    color: #a78bfa;
+    font-weight: 600;
+}
+.tree-view .tree-file {
+    color: #fbbf24;
+}
+
+/* Feature table styling */
+.feature-table-wrap {
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+.feature-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    background: rgba(30,27,75,0.25);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.feature-table th {
+    background: rgba(124,58,237,0.15);
+    color: #c4b5fd;
+    padding: 0.7rem 0.8rem;
+    text-align: left;
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(124,58,237,0.15);
+}
+.feature-table td {
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid rgba(124,58,237,0.06);
+    color: #b0b8cc;
+    vertical-align: top;
+}
+.feature-table tr:hover td {
+    background: rgba(124,58,237,0.04);
+}
+.feature-table .feat-name {
+    color: #fbbf24;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+.feature-table .feat-type {
+    color: #a78bfa;
+    font-weight: 600;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+.feature-table .feat-desc {
+    font-size: 0.78rem;
+    line-height: 1.6;
+}
+
+/* Platform badges with SVG */
+.platform-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0.2rem;
+}
+
+/* Selectbox override - hide search input */
+[data-baseweb="select"] input {
+    display: none !important;
+}
+[data-baseweb="select"] > div {
+    cursor: pointer !important;
+}
+
+/* Generic button hover for interactive elements */
+.clickable-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.clickable-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Radio button styling (replacing selectbox) */
+[data-testid="stHorizontalRadio"] {
+    background: rgba(30,27,75,0.3);
+    border-radius: 14px;
+    padding: 4px;
+    border: 1px solid rgba(124,58,237,0.1);
+    margin-bottom: 0.5rem;
+}
+[data-testid="stHorizontalRadio"] label {
+    border-radius: 10px;
+    padding: 0.4rem 1rem;
+    color: #9ca3af;
+    font-weight: 500;
+    font-size: 0.85rem;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+[data-testid="stHorizontalRadio"] label:hover {
+    background: rgba(124,58,237,0.1);
+    color: #c4b5fd;
+}
+[data-testid="stHorizontalRadio"] label[data-selected="true"] {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: white;
+    font-weight: 600;
+}
+
+/* Fix for pre/wrapping */
+.stCodeBlock pre {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+}
+
+/* SVG icon inline styling */
+.icon-svg {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 0.3rem;
 }
