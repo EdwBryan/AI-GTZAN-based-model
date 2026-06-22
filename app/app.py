@@ -44,14 +44,18 @@ def load_artifacts():
         error_analysis = json.load(f)
     with open(ARTIFACTS_DIR / "classification_reports.json") as f:
         reports_all = json.load(f)
+    with open(ARTIFACTS_DIR / "roc_data.json") as f:
+        roc_data = json.load(f)
+    with open(ARTIFACTS_DIR / "pr_data.json") as f:
+        pr_data = json.load(f)
     cm_best = cm_all[metadata["best_model"]]
-    return model, scaler, le, metadata, feature_names, importance_df, comparison, cm_all, cm_best, error_analysis, reports_all
+    return model, scaler, le, metadata, feature_names, importance_df, comparison, cm_all, cm_best, error_analysis, reports_all, roc_data, pr_data
 
 if not ARTIFACTS_DIR.exists() or not (ARTIFACTS_DIR / "stacking_model.pkl").exists():
     st.error("Modelo no encontrado. Ejecuta train_and_save.py primero.")
     st.stop()
 
-model, scaler, le, metadata, feature_names, importance_df, comparison, cm_all, cm_best, error_analysis, reports_all = load_artifacts()
+model, scaler, le, metadata, feature_names, importance_df, comparison, cm_all, cm_best, error_analysis, reports_all, roc_data, pr_data = load_artifacts()
 genres = metadata["genres"]
 best_model_name = metadata["best_model"]
 
@@ -618,7 +622,7 @@ def pagina_modelo():
 
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-    cm_tab, fi_tab, cr_tab = st.tabs(["📊 Matriz de Confusión", "📈 Importancia de Features", "📋 Reporte de Clasificación"])
+    cm_tab, fi_tab, cr_tab, roc_tab = st.tabs(["📊 Matriz de Confusión", "📈 Importancia de Features", "📋 Reporte de Clasificación", "📉 Curvas ROC / PR"])
 
     with cm_tab:
         if "matrix" in cm_best and "labels" in cm_best:
@@ -678,6 +682,81 @@ def pagina_modelo():
             "precision": "{:.2%}", "recall": "{:.2%}",
             "f1-score": "{:.2%}", "support": "{:.0f}"
         }), use_container_width=True)
+
+    with roc_tab:
+        import matplotlib.pyplot as plt
+        model_names = {
+            'random_forest': 'Random Forest',
+            'svm_calibrado': 'SVM Calibrado',
+            'stacking_ensemble': 'Stacking Ensemble',
+            'neural_network': 'Red Neuronal'
+        }
+        colors_models = ['#a78bfa', '#7c3aed', '#6d28d9', '#c4b5fd']
+        auc_data = []
+        roc_fig, roc_ax = plt.subplots(figsize=(10, 8))
+        for idx, (mkey, mname) in enumerate(model_names.items()):
+            if mkey in roc_data:
+                micro = roc_data[mkey]['micro']
+                roc_ax.plot(micro['fpr'], micro['tpr'], color=colors_models[idx],
+                           label=f"{mname} (AUC={micro['auc']:.3f})", linewidth=2)
+                auc_data.append({"Modelo": mname, "ROC-AUC Macro": f"{roc_data[mkey]['macro_auc']:.4f}",
+                                "ROC-AUC Micro": f"{micro['auc']:.4f}"})
+        roc_ax.plot([0, 1], [0, 1], 'k--', alpha=0.3, label='Random')
+        roc_ax.set_xlabel("False Positive Rate", fontsize=11)
+        roc_ax.set_ylabel("True Positive Rate", fontsize=11)
+        roc_ax.set_title("ROC Curves — Comparación de Modelos (Micro-average)", fontsize=13, fontweight=700)
+        roc_ax.legend(loc='lower right', fontsize=9)
+        roc_fig.patch.set_facecolor('#0a0a1a')
+        roc_ax.set_facecolor('#1a1040')
+        roc_ax.tick_params(colors='white')
+        roc_ax.xaxis.label.set_color('white')
+        roc_ax.yaxis.label.set_color('white')
+        roc_ax.title.set_color('white')
+        st.pyplot(roc_fig)
+
+        pr_fig, pr_ax = plt.subplots(figsize=(10, 8))
+        for idx, (mkey, mname) in enumerate(model_names.items()):
+            if mkey in pr_data:
+                micro = pr_data[mkey]['micro']
+                pr_ax.plot(micro['recall'], micro['precision'], color=colors_models[idx],
+                          label=f"{mname} (AUC={micro['auc']:.3f})", linewidth=2)
+        pr_ax.set_xlabel("Recall", fontsize=11)
+        pr_ax.set_ylabel("Precision", fontsize=11)
+        pr_ax.set_title("Precision-Recall Curves — Comparación de Modelos (Micro-average)", fontsize=13, fontweight=700)
+        pr_ax.legend(loc='lower left', fontsize=9)
+        pr_fig.patch.set_facecolor('#0a0a1a')
+        pr_ax.set_facecolor('#1a1040')
+        pr_ax.tick_params(colors='white')
+        pr_ax.xaxis.label.set_color('white')
+        pr_ax.yaxis.label.set_color('white')
+        pr_ax.title.set_color('white')
+        st.pyplot(pr_fig)
+
+        st.markdown("### AUC Scores por Modelo")
+        auc_df = pd.DataFrame(auc_data)
+        st.dataframe(auc_df, hide_index=True, use_container_width=True)
+
+        with st.expander("Ver curvas por clase (Stacking Ensemble)"):
+            stacking_roc = roc_data.get('stacking_ensemble', {})
+            if 'per_class' in stacking_roc:
+                fig3, ax3 = plt.subplots(figsize=(10, 8))
+                colors_genre = plt.cm.Purples(np.linspace(0.3, 0.9, len(genres)))
+                for i, g in enumerate(genres):
+                    if g in stacking_roc['per_class']:
+                        d = stacking_roc['per_class'][g]
+                        ax3.plot(d['fpr'], d['tpr'], color=colors_genre[i], label=f"{g} (AUC={d['auc']:.3f})", linewidth=1.5)
+                ax3.plot([0, 1], [0, 1], 'k--', alpha=0.3)
+                ax3.set_xlabel("False Positive Rate")
+                ax3.set_ylabel("True Positive Rate")
+                ax3.set_title("ROC Curves por Clase — Stacking Ensemble", fontsize=13, fontweight=700)
+                ax3.legend(loc='lower right', fontsize=8)
+                fig3.patch.set_facecolor('#0a0a1a')
+                ax3.set_facecolor('#1a1040')
+                ax3.tick_params(colors='white')
+                ax3.xaxis.label.set_color('white')
+                ax3.yaxis.label.set_color('white')
+                ax3.title.set_color('white')
+                st.pyplot(fig3)
 
     st.markdown("""
         <div class="footer">

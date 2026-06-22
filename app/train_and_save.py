@@ -10,7 +10,8 @@ import json
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split, cross_val_score, KFold
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score
+from sklearn.preprocessing import label_binarize
 from sklearn.ensemble import RandomForestClassifier, StackingClassifier
 from sklearn.svm import SVC
 from sklearn.calibration import CalibratedClassifierCV
@@ -252,6 +253,54 @@ def train_and_save():
         reports[name] = report
 
     print("\n" + "=" * 60)
+    print("ROC & PR CURVES")
+    print("=" * 60)
+    n_classes = len(genres)
+    y_test_bin = label_binarize(y_test_enc, classes=range(n_classes))
+    roc_data = {}
+    pr_data = {}
+    for name, r in results.items():
+        print(f"\n  {name}:")
+        model = r['model']
+        if name == 'neural_network':
+            y_score = model.predict(X_test_scaled, verbose=0)
+        else:
+            y_score = model.predict_proba(X_test_scaled)
+        roc_per_class = {}
+        pr_per_class = {}
+        for i in range(n_classes):
+            fpr, tpr, _ = roc_curve(y_test_bin[:, i], y_score[:, i])
+            roc_auc = auc(fpr, tpr)
+            roc_per_class[genres[i]] = {
+                'fpr': [float(x) for x in fpr],
+                'tpr': [float(x) for x in tpr],
+                'auc': float(roc_auc)
+            }
+            precision, recall, _ = precision_recall_curve(y_test_bin[:, i], y_score[:, i])
+            pr_auc = float(average_precision_score(y_test_bin[:, i], y_score[:, i]))
+            pr_per_class[genres[i]] = {
+                'precision': [float(x) for x in precision],
+                'recall': [float(x) for x in recall],
+                'auc': pr_auc
+            }
+        fpr_micro, tpr_micro, _ = roc_curve(y_test_bin.ravel(), y_score.ravel())
+        roc_auc_micro = auc(fpr_micro, tpr_micro)
+        precision_micro, recall_micro, _ = precision_recall_curve(y_test_bin.ravel(), y_score.ravel())
+        pr_auc_micro = float(average_precision_score(y_test_bin, y_score, average='micro'))
+        roc_data[name] = {
+            'per_class': roc_per_class,
+            'micro': {'fpr': [float(x) for x in fpr_micro], 'tpr': [float(x) for x in tpr_micro], 'auc': float(roc_auc_micro)},
+            'macro_auc': float(np.mean([v['auc'] for v in roc_per_class.values()]))
+        }
+        pr_data[name] = {
+            'per_class': pr_per_class,
+            'micro': {'precision': [float(x) for x in precision_micro], 'recall': [float(x) for x in recall_micro], 'auc': pr_auc_micro},
+            'macro_auc': float(np.mean([v['auc'] for v in pr_per_class.values()]))
+        }
+        print(f"    ROC-AUC macro: {roc_data[name]['macro_auc']:.4f}, micro: {roc_auc_micro:.4f}")
+        print(f"    PR-AUC  macro: {pr_data[name]['macro_auc']:.4f}, micro: {pr_auc_micro:.4f}")
+
+    print("\n" + "=" * 60)
     print("SAVING ARTIFACTS")
     print("=" * 60)
     with open(ARTIFACTS_DIR / 'stacking_model.pkl', 'wb') as f:
@@ -273,6 +322,10 @@ def train_and_save():
         json.dump(error_analysis, f, indent=2)
     with open(ARTIFACTS_DIR / 'classification_reports.json', 'w') as f:
         json.dump(reports, f, indent=2)
+    with open(ARTIFACTS_DIR / 'roc_data.json', 'w') as f:
+        json.dump(roc_data, f, indent=2)
+    with open(ARTIFACTS_DIR / 'pr_data.json', 'w') as f:
+        json.dump(pr_data, f, indent=2)
     with open(ARTIFACTS_DIR / 'metadata.json', 'w') as f:
         json.dump({
             'best_model': best_model_name,
