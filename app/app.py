@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import json
+import matplotlib.pyplot as plt
 from pathlib import Path
 
 st.set_page_config(page_title="AI Genre Classifier", page_icon=":musical_note:", layout="wide")
@@ -119,43 +120,54 @@ def pagina_inicio():
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Generos Soportados</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#6b7280;font-size:0.75rem;margin:-0.5rem 0 0.5rem 0;">Haz clic en cualquier genero para ver su precision y descripcion.</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:0.75rem;margin:-0.5rem 0 0.5rem 0;">Selecciona un genero abajo para ver su descripcion y precision.</p>', unsafe_allow_html=True)
 
     genre_info = {
-        'blues': 'Genero con estructura de 12 compases. Su precision es moderada, se confunde con jazz y country.',
-        'classical': 'El genero mas facil de identificar (100% precision). Su estructura orquestal y dinamica lo hacen unico.',
-        'country': 'Se confunde frecuentemente con rock y folk. Su ritmo y armonia vocal son sus claves distintivas.',
-        'disco': 'Ritmo de cuatro suelos con BPM alto. Se confunde con hip-hop por su energia percusiva.',
-        'hiphop': 'Basado en ritmos sampleados y voces. Comparte patrones ritmicos con el reggae y el pop.',
-        'jazz': 'Improvisacion y armonia compleja. Se confunde con classical por sus elementos instrumentales.',
-        'metal': 'Guitarras distorsionadas y alta energia. Es uno de los generos mas distintivos espectralmente.',
-        'pop': 'Estructura cancion comercial. Su variabilidad lo hace confundirse con dance y rock.',
-        'reggae': 'Ritmo sincopado caracteristico. Su patron ritmico es unico entre los 10 generos.',
-        'rock': 'El mas dificil de clasificar (40% precision). Su amplia variabilidad estilistica lo hace confundirse con muchos generos.',
+        'blues': 'Estructura de 12 compases. Se confunde con jazz y country. Precision moderada.',
+        'classical': 'El mas facil de identificar (100%). Estructura orquestal y dinamica unica.',
+        'country': 'Se confunde con rock y folk. Ritmo y armonia vocal distintivos.',
+        'disco': 'Ritmo de cuatro suelos con BPM alto. Se confunde con hip-hop.',
+        'hiphop': 'Ritmos sampleados y voces. Comparte patrones con reggae y pop.',
+        'jazz': 'Improvisacion y armonia compleja. Se confunde con classical.',
+        'metal': 'Guitarras distorsionadas. De los mas distintivos espectralmente.',
+        'pop': 'Estructura comercial. Se confunde con dance y rock.',
+        'reggae': 'Ritmo sincopado caracteristico. Unico entre los 10 generos.',
+        'rock': 'El mas dificil (40%). Amplia variabilidad estilistica.',
     }
 
     class_acc = metadata.get("class_accuracy", {})
-    genre_cols = st.columns(5)
-    for i, genre in enumerate(genres):
-        acc = class_acc.get(genre, 0)
-        with genre_cols[i % 5]:
-            btn_key = f"genre_btn_{genre}"
-            flipped = st.session_state.get(btn_key, False)
-            if not flipped:
-                if st.button(genre, key=f"gb_{genre}", use_container_width=True):
-                    st.session_state[btn_key] = True
-                    st.rerun()
-            else:
-                desc = genre_info.get(genre, "Genero musical del dataset GTZAN.")
-                st.markdown(f"""
-                    <div class="genre-card-back" style="position:relative;min-height:80px;display:flex;align-items:center;justify-content:center;padding:0.8rem;border-radius:14px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);cursor:pointer;font-size:0.72rem;line-height:1.4;color:#e2e8f0;text-align:center;"
-                         onclick="this.parentElement.querySelector('button').click()">
-                        <span>{desc}</span>
-                    </div>
-                """, unsafe_allow_html=True)
-                if st.button("← Volver", key=f"gb_back_{genre}", use_container_width=True):
-                    st.session_state[btn_key] = False
-                    st.rerun()
+
+    # First row of 5
+    row1 = st.columns(5)
+    for i, genre in enumerate(genres[:5]):
+        with row1[i]:
+            st.button(genre.upper(), key=f"g_{genre}", use_container_width=True)
+
+    # Second row of 5
+    row2 = st.columns(5)
+    for i, genre in enumerate(genres[5:]):
+        with row2[i]:
+            st.button(genre.upper(), key=f"g_{genre}", use_container_width=True)
+
+    # Show selected genre info
+    sel_genre = None
+    for g in genres:
+        if st.session_state.get(f"g_{g}", False):
+            sel_genre = g
+            break
+
+    if sel_genre:
+        acc = class_acc.get(sel_genre, 0)
+        desc = genre_info.get(sel_genre, "")
+        st.markdown(f"""
+            <div style="margin-top:1rem;padding:1.2rem;border-radius:14px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15);">
+                <div style="display:flex;align-items:center;gap:1rem;">
+                    <div style="font-size:1.3rem;font-weight:800;color:#c4b5fd;text-transform:capitalize;">{sel_genre}</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#a78bfa;">{acc:.0%} precision</div>
+                </div>
+                <p style="color:#b0b8cc;margin-top:0.5rem;font-size:0.9rem;">{desc}</p>
+            </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("""
         <div class="footer">
@@ -196,6 +208,24 @@ def pagina_documentacion():
 
         st.markdown("""
             <div class="doc-card fade-in">
+                <h3>Tecnologías Utilizadas</h3>
+                <ul>
+                    <li><strong>Python 3.13</strong> — Lenguaje principal</li>
+                    <li><strong>Streamlit</strong> — Framework web interactivo</li>
+                    <li><strong>Scikit-learn</strong> — Random Forest, preprocesamiento</li>
+                    <li><strong>TensorFlow / Keras</strong> — Red Neuronal</li>
+                    <li><strong>Librosa</strong> — Extracción de features de audio</li>
+                    <li><strong>Pandas / NumPy</strong> — Manipulación de datos</li>
+                    <li><strong>Matplotlib / Seaborn</strong> — Visualizaciones</li>
+                    <li><strong>Docker</strong> — Contenedor para despliegue</li>
+                    <li><strong>Hugging Face Spaces</strong> — Plataforma de hosting</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+            <div class="doc-card fade-in">
                 <h3>Metodología</h3>
                 <ol style="color:#b0b8cc;padding-left:1.2rem;">
                     <li><strong>Extracción de características</strong> con Librosa (MFCC, Chroma, Spectral, Tonnetz, Tempogram)</li>
@@ -207,34 +237,29 @@ def pagina_documentacion():
             </div>
         """, unsafe_allow_html=True)
 
-    with col2:
         st.markdown("""
             <div class="doc-card fade-in">
-                <h3>Tecnologías Utilizadas</h3>
+                <h3>Arquitectura del Sistema</h3>
+                <p>El sistema sigue una arquitectura de pipeline de Machine Learning:</p>
                 <ul>
-                    <li><strong>Python 3.13</strong> — Lenguaje principal</li>
-                    <li><strong>Streamlit</strong> — Framework web interactivo</li>
-                    <li><strong>Scikit-learn</strong> — Random Forest, preprocesamiento</li>
-                    <li><strong>Librosa</strong> — Extracción de features de audio</li>
-                    <li><strong>Pandas / NumPy</strong> — Manipulación de datos</li>
-                    <li><strong>Matplotlib / Seaborn</strong> — Visualizaciones</li>
-                    <li><strong>Docker</strong> — Contenedor para despliegue</li>
-                    <li><strong>Hugging Face Spaces</strong> — Plataforma de hosting</li>
+                    <li><strong>Entrada:</strong> Archivo de audio (WAV/MP3)</li>
+                    <li><strong>Preprocesamiento:</strong> Carga con Librosa → Extracción de features</li>
+                    <li><strong>Inferencia:</strong> StandardScaler → Stacking Ensemble (RF + SVM + LogisticRegression) → Predicción</li>
+                    <li><strong>Salida:</strong> Género predicho + probabilidades + visualizaciones</li>
                 </ul>
             </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("""
-            <div class="doc-card fade-in">
-                <h3>Caracteristicas Extraidas (33 features)</h3>
-                <p style="color:#b0b8cc;font-size:0.85rem;margin-bottom:0.8rem;">
-                    Cada archivo de audio se convierte en un vector de 33 caracteristicas numericas que capturan
-                    diferentes aspectos del sonido: timbrica, armonia, espectro, ritmo y energia.
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
+    # Full width: Feature table
+    st.markdown('<div class="section-title">Caracteristicas Extraidas (33 features)</div>', unsafe_allow_html=True)
+    st.markdown("""
+        <p style="color:#b0b8cc;font-size:0.85rem;margin-bottom:0.8rem;">
+            Cada archivo de audio se convierte en un vector de 33 caracteristicas numericas que capturan
+            diferentes aspectos del sonido: timbrica, armonia, espectro, ritmo y energia.
+        </p>
+    """, unsafe_allow_html=True)
 
-        st.markdown("""<div class="feature-table-wrap"><table class="feature-table">
+    st.markdown("""<div class="feature-table-wrap"><table class="feature-table">
 <tr><th>Feature en el CSV</th><th>Tipo</th><th>Descripcion</th></tr>
 <tr><td class="feat-name">mfcc_mean<br>mfcc_std</td><td class="feat-type">Timbrica</td><td class="feat-desc"><strong>Mel-Frequency Cepstral Coefficients (MFCCs):</strong> representan la envolvente espectral en una escala perceptual similar al oido humano. Son los descriptores mas utilizados en clasificacion de audio. Se calcularon 20 coeficientes y se resumieron en media y desviacion estandar sobre todo el fragmento.</td></tr>
 <tr><td class="feat-name">mfcc_delta_mean<br>mfcc_delta_std</td><td class="feat-type">Timbrica (dinamica)</td><td class="feat-desc"><strong>Delta de los MFCCs:</strong> representan la derivada temporal de primer orden de los MFCCs, capturando como cambia el timbre a lo largo del tiempo. Aportan informacion sobre la dinamica espectral del audio, complementando la informacion estatica de los MFCCs base.</td></tr>
@@ -254,19 +279,6 @@ def pagina_documentacion():
 <tr><td class="feat-name">mel_spec_mean<br>mel_spec_std</td><td class="feat-type">Espectral</td><td class="feat-desc"><strong>Espectrograma mel:</strong> representacion de la energia del espectro de frecuencias en escala mel (perceptual), promediada sobre el eje temporal. Es una de las representaciones mas completas del contenido frecuencial de un audio y sirve como base para los MFCCs. Su media y desviacion estandar resumen la distribucion global de energia en el dominio mel.</td></tr>
 <tr><td class="feat-name">tempo</td><td class="feat-type">Ritmica</td><td class="feat-desc"><strong>Tempo estimado en BPM:</strong> valor escalar que representa la velocidad ritmica dominante del fragmento, calculado mediante el algoritmo de beat tracking de librosa. A diferencia del tempograma, este valor resume el ritmo global en un unico numero. Generos como el disco, el hip-hop y el metal tienen rangos de BPM muy caracteristicos y diferenciados.</td></tr>
 </table></div>""", unsafe_allow_html=True)
-
-        st.markdown("""
-            <div class="doc-card fade-in">
-                <h3>Arquitectura del Sistema</h3>
-                <p>El sistema sigue una arquitectura de pipeline de Machine Learning:</p>
-                <ul>
-                    <li><strong>Entrada:</strong> Archivo de audio (WAV/MP3)</li>
-                    <li><strong>Preprocesamiento:</strong> Carga con Librosa → Extracción de features</li>
-                    <li><strong>Inferencia:</strong> StandardScaler → Stacking Ensemble (RF + SVM + LogisticRegression) → Predicción</li>
-                    <li><strong>Salida:</strong> Género predicho + probabilidades + visualizaciones</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
 
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
@@ -299,42 +311,65 @@ def pagina_codigo():
 
     st.info("Los notebooks contienen el proceso completo de entrenamiento del modelo (ETL + 4 modelos de clasificacion).")
     st.markdown("### Notebooks de Entrenamiento")
+    # Try primary path, fallback to CWD
+    def _find_notebook(name):
+        p = ROOT_DIR / name
+        if p.exists():
+            return p
+        p2 = Path.cwd() / name
+        if p2.exists():
+            return p2
+        p3 = Path.cwd().parent / name
+        if p3.exists():
+            return p3
+        return p  # return the primary for error msg
+
     nb_tab = st.radio(
         "Selecciona un notebook:",
         list(NOTEBOOK_FILES.keys()),
         horizontal=True,
         label_visibility="collapsed",
-        key="nb_selector"
+        key="nb_selector_v2"
     )
-    nb_path = NOTEBOOK_FILES.get(nb_tab)
+    nb_path = _find_notebook(nb_tab)
     if nb_path and nb_path.exists():
         try:
             import json
             raw = nb_path.read_text(encoding="utf-8")
             nb = json.loads(raw)
             cells = nb.get("cells", [])
-            md_cells = [c for c in cells if c.get("cell_type") == "markdown"]
             code_cells = [c for c in cells if c.get("cell_type") == "code"]
             n_code = len(code_cells)
             st.caption(f"{nb_tab} — {n_code} celdas de codigo")
             for i in range(n_code):
                 src = "".join(code_cells[i].get("source", []))
-                with st.expander(f"Celda {i+1}" + (f" — {src.split(chr(10))[0][:60].strip()}" if src.strip() else "")):
-                    st.code(src, language="python", line_numbers=True)
+                if src.strip():
+                    with st.expander(f"Celda {i+1} — {src.split(chr(10))[0][:80].strip()}"):
+                        st.code(src, language="python", line_numbers=True)
         except Exception as e:
             st.error(f"Error al cargar notebook: {e}")
     else:
-        st.warning("No se encontro el archivo del notebook.")
+        st.warning(f"No se encontro el archivo del notebook (buscado en: {nb_path})")
 
     st.markdown("### Scripts del Sistema")
+    def _find_script(name):
+        p = (APP_DIR / name) if Path(name).suffix == '.py' else (ROOT_DIR / name)
+        if p.exists():
+            return p
+        p2 = Path.cwd() / name
+        if p2.exists():
+            return p2
+        return p
     code_tab = st.radio(
         "Selecciona un archivo:",
         list(CODE_FILES.keys()) + list(ROOT_FILES.keys()),
         horizontal=True,
         label_visibility="collapsed",
-        key="code_selector"
+        key="code_selector_v2"
     )
     file_path = CODE_FILES.get(code_tab) or ROOT_FILES.get(code_tab)
+    if not file_path or not file_path.exists():
+        file_path = _find_script(code_tab)
     if file_path and file_path.exists():
         content = file_path.read_text(encoding="utf-8")
         lang = "python" if code_tab.endswith(".py") else "dockerfile"
@@ -425,15 +460,15 @@ def pagina_pruebas():
         import seaborn as sns
         cm = np.array(cm_best["matrix"])
         labels = cm_best["labels"]
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples",
+        fig, ax = plt.subplots(figsize=(7, 5.5))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":7},
                     xticklabels=labels, yticklabels=labels, ax=ax)
-        ax.set_xlabel("Predicho", fontsize=11, fontweight=600)
-        ax.set_ylabel("Real", fontsize=11, fontweight=600)
-        ax.set_title(f"Matriz de Confusión — Stacking Ensemble ({metadata['test_accuracy']:.1%})", fontsize=13, fontweight=700)
+        ax.set_xlabel("Predicho", fontsize=9, fontweight=600)
+        ax.set_ylabel("Real", fontsize=9, fontweight=600)
+        ax.set_title(f"Matriz de Confusion - Stacking Ensemble ({metadata['test_accuracy']:.1%})", fontsize=11, fontweight=700)
         fig.patch.set_facecolor('#0a0a1a')
         ax.set_facecolor('#1a1040')
-        ax.tick_params(colors='white')
+        ax.tick_params(colors='white', labelsize=7)
         ax.xaxis.label.set_color('white')
         ax.yaxis.label.set_color('white')
         ax.title.set_color('white')
@@ -444,33 +479,35 @@ def pagina_pruebas():
     for i, (model_name, pairs) in enumerate(error_analysis.items()):
         with error_tabs[i]:
             if pairs:
-                for p in pairs:
-                    st.markdown(f"""
-                        <div style="display:flex;align-items:center;gap:1rem;padding:0.5rem 0.8rem;margin:0.3rem 0;
-                            background:rgba(30,27,75,0.25);border-radius:10px;border:1px solid rgba(124,58,237,0.08);">
-                            <span style="font-weight:700;color:#f87171;">{p['actual'].capitalize()}</span>
-                            <span style="color:#6b7280;">→</span>
-                            <span style="font-weight:700;color:#fbbf24;">{p['predicted'].capitalize()}</span>
-                            <span style="margin-left:auto;font-weight:600;color:#a78bfa;">{p['count']} veces</span>
-                        </div>
-                    """, unsafe_allow_html=True)
+                cols = st.columns(3)
+                for idx, p in enumerate(pairs):
+                    with cols[idx % 3]:
+                        st.markdown(f"""
+                            <div style="display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.5rem;margin:0.15rem 0;
+                                background:rgba(30,27,75,0.25);border-radius:8px;border:1px solid rgba(124,58,237,0.08);font-size:0.75rem;">
+                                <span style="font-weight:700;color:#f87171;">{p['actual'].capitalize()}</span>
+                                <span style="color:#6b7280;">→</span>
+                                <span style="font-weight:700;color:#fbbf24;">{p['predicted'].capitalize()}</span>
+                                <span style="margin-left:auto;font-weight:600;color:#a78bfa;">{p['count']}x</span>
+                            </div>
+                        """, unsafe_allow_html=True)
             else:
                 st.info("No se encontraron confusiones significativas (>=2).")
 
     st.markdown('<div class="section-title">Importancia de Caracteristicas (Random Forest 500 arboles)</div>', unsafe_allow_html=True)
     top_n = min(15, len(importance_df))
     top_feat = importance_df.head(top_n)
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
+    fig2, ax2 = plt.subplots(figsize=(7, 5))
     colors = plt.cm.Purples(np.linspace(0.3, 0.9, top_n))[::-1]
     bars = ax2.barh(range(top_n), top_feat["importance"].values, color=colors)
     ax2.set_yticks(range(top_n))
-    ax2.set_yticklabels(top_feat["feature"].values, fontsize=9)
+    ax2.set_yticklabels(top_feat["feature"].values, fontsize=7)
     ax2.invert_yaxis()
-    ax2.set_xlabel("Importancia", fontsize=11, fontweight=600)
-    ax2.set_title(f"Top {top_n} Características más Importantes", fontsize=13, fontweight=700)
+    ax2.set_xlabel("Importancia", fontsize=9, fontweight=600)
+    ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=11, fontweight=700)
     fig2.patch.set_facecolor('#0a0a1a')
     ax2.set_facecolor('#1a1040')
-    ax2.tick_params(colors='white')
+    ax2.tick_params(colors='white', labelsize=7)
     ax2.xaxis.label.set_color('white')
     ax2.title.set_color('white')
     for bar in bars:
@@ -503,10 +540,9 @@ def pagina_pruebas():
     """, unsafe_allow_html=True)
 
 def pagina_clasificador():
-    st.markdown('<div class="section-title">Clasificador de Géneros Musicales</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:0.5rem;">Sube un archivo de audio para clasificarlo entre 10 géneros musicales.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Clasificador de Generos Musicales</div>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:0.5rem;">Sube un archivo de audio para clasificarlo entre 10 generos musicales.</p>', unsafe_allow_html=True)
 
-    st.info("Formatos: WAV, MP3, FLAC, OGG, M4A - Duracion recomendada: 30 segundos")
     from utils import extract_features_from_audio, load_audio
 
     st.markdown("""
@@ -524,72 +560,135 @@ def pagina_clasificador():
 
     uploaded = st.file_uploader("Selecciona un archivo de audio", type=["wav", "mp3", "flac", "ogg", "m4a"], label_visibility="collapsed")
 
-    if uploaded is not None:
-        with st.spinner("Analizando audio y extrayendo características..."):
-            try:
-                y, sr = load_audio(uploaded.read())
-                feat = extract_features_from_audio(y, sr)
-                df = pd.DataFrame([feat])
-                X = scaler.transform(df[feature_names])
-                proba = model.predict_proba(X)[0]
-                pred_idx = int(np.argmax(proba))
-                pred = le.inverse_transform([pred_idx])[0]
-                conf = float(np.max(proba))
+    trim_start = 0.0
+    trim_end = 30.0
+    classify_clicked = False
 
-                pred_col, chart_col = st.columns([1, 1.5])
-                with pred_col:
+    if uploaded is not None:
+        file_bytes = uploaded.read()
+        # get duration with pydub
+        try:
+            from pydub import AudioSegment
+            import io
+            audio_seg = AudioSegment.from_file(io.BytesIO(file_bytes))
+            duration_sec = len(audio_seg) / 1000.0
+        except Exception:
+            # fallback: load with librosa just for duration
+            y_tmp, sr_tmp = load_audio(file_bytes)
+            duration_sec = len(y_tmp) / sr_tmp
+            audio_seg = None
+
+        st.info(f"Duracion del audio: {duration_sec:.1f}s" + (" (se recomiendan 30s)" if duration_sec > 35 else ""))
+
+        play_col, trim_col = st.columns([1, 1])
+        with play_col:
+            st.audio(file_bytes, format=f"audio/{uploaded.type.split('/')[-1] if '/' in uploaded.type else 'wav'}")
+
+        with trim_col:
+            if duration_sec < 30:
+                st.error(f"Audio demasiado corto ({duration_sec:.1f}s). Se requieren al menos 30 segundos para un analisis optimo.")
+                max_end = duration_sec
+            else:
+                max_end = min(duration_sec, 60)
+                trim_range = st.slider(
+                    "Selecciona el segmento a analizar:",
+                    0.0, max_end, (0.0, min(30.0, max_end)),
+                    0.5, format="%.1fs"
+                )
+                trim_start, trim_end = trim_range
+
+        if duration_sec >= 30:
+            classify_clicked = st.button("Clasificar segmento seleccionado", type="primary", use_container_width=True)
+
+        if classify_clicked or (duration_sec >= 30 and st.session_state.get("auto_classified", False)):
+            st.session_state["auto_classified"] = True
+            with st.spinner("Analizando audio y extrayendo caracteristicas..."):
+                try:
+                    # Trim audio
+                    if audio_seg is not None:
+                        start_ms = int(trim_start * 1000)
+                        end_ms = int(min(trim_end, duration_sec) * 1000)
+                        trimmed = audio_seg[start_ms:end_ms]
+                        wav_buf = io.BytesIO()
+                        trimmed.export(wav_buf, format="wav")
+                        wav_buf.seek(0)
+                        import librosa
+                        y, sr = librosa.load(wav_buf, sr=22050, mono=True)
+                    else:
+                        # fallback: slice array
+                        sr = sr_tmp
+                        start_s = int(trim_start * sr)
+                        end_s = int(min(trim_end, duration_sec) * sr)
+                        y = y_tmp[start_s:end_s]
+
+                    feat = extract_features_from_audio(y, sr)
+                    df = pd.DataFrame([feat])
+                    X = scaler.transform(df[feature_names])
+                    proba = model.predict_proba(X)[0]
+                    pred_idx = int(np.argmax(proba))
+                    pred = le.inverse_transform([pred_idx])[0]
+                    conf = float(np.max(proba))
+
                     st.markdown(f"""
-                        <div class="prediction-result fade-in">
-                            <div class="prediction-label">Género Predicho</div>
-                            <div class="prediction-value">{pred.capitalize()}</div>
-                            <div class="prediction-confidence">Confianza: {conf:.1%}</div>
-                        </div>
+                        <div style="margin-top:1rem;font-size:0.85rem;color:#6b7280;">Segmento analizado: {trim_start:.1f}s - {trim_end:.1f}s ({trim_end-trim_start:.1f}s)</div>
                     """, unsafe_allow_html=True)
 
-                    top3_idx = np.argsort(proba)[-3:][::-1]
-                    st.markdown("### Top 3 Predicciones")
-                    for rank, idx in enumerate(top3_idx, 1):
-                        pct = proba[idx]
-                        color = ["#a78bfa", "#7c3aed", "#6d28d9"][rank-1]
+                    pred_col, chart_col = st.columns([1, 1.5])
+                    with pred_col:
                         st.markdown(f"""
-                            <div style="display:flex;align-items:center;gap:0.8rem;padding:0.4rem 0;">
-                                <span style="color:{color};font-weight:800;font-size:1.1rem;">#{rank}</span>
-                                <span style="flex:1;font-weight:600;color:#c4b5fd;">{le.classes_[idx].capitalize()}</span>
-                                <span style="font-weight:700;color:{color};">{pct:.1%}</span>
-                            </div>
-                            <div style="height:6px;background:rgba(30,27,75,0.5);border-radius:4px;overflow:hidden;">
-                                <div style="height:100%;width:{pct*100}%;background:linear-gradient(90deg,{color},#a78bfa);border-radius:4px;"></div>
+                            <div class="prediction-result fade-in">
+                                <div class="prediction-label">Genero Predicho</div>
+                                <div class="prediction-value">{pred.capitalize()}</div>
+                                <div class="prediction-confidence">Confianza: {conf:.1%}</div>
                             </div>
                         """, unsafe_allow_html=True)
 
-                with chart_col:
-                    proba_df = pd.DataFrame({
-                        "Género": [g.capitalize() for g in le.classes_],
-                        "Probabilidad": proba
-                    }).sort_values("Probabilidad", ascending=False)
-                    st.subheader("Distribución de Probabilidades")
-                    st.bar_chart(proba_df.set_index("Género"), height=400, color="#7c3aed")
+                        top3_idx = np.argsort(proba)[-3:][::-1]
+                        st.markdown("### Top 3 Predicciones")
+                        for rank, idx in enumerate(top3_idx, 1):
+                            pct = proba[idx]
+                            color = ["#a78bfa", "#7c3aed", "#6d28d9"][rank-1]
+                            st.markdown(f"""
+                                <div style="display:flex;align-items:center;gap:0.8rem;padding:0.4rem 0;">
+                                    <span style="color:{color};font-weight:800;font-size:1.1rem;">#{rank}</span>
+                                    <span style="flex:1;font-weight:600;color:#c4b5fd;">{le.classes_[idx].capitalize()}</span>
+                                    <span style="font-weight:700;color:{color};">{pct:.1%}</span>
+                                </div>
+                                <div style="height:6px;background:rgba(30,27,75,0.5);border-radius:4px;overflow:hidden;">
+                                    <div style="height:100%;width:{pct*100}%;background:linear-gradient(90deg,{color},#a78bfa);border-radius:4px;"></div>
+                                </div>
+                            """, unsafe_allow_html=True)
 
-                with st.expander("Ver caracteristicas extraidas (33 features)"):
-                    feat_df = pd.DataFrame([feat]).T.reset_index()
-                    feat_df.columns = ["Característica", "Valor"]
-                    feat_df["Valor"] = feat_df["Valor"].round(4)
-                    st.dataframe(feat_df, use_container_width=True, height=400)
+                    with chart_col:
+                        proba_df = pd.DataFrame({
+                            "Genero": [g.capitalize() for g in le.classes_],
+                            "Probabilidad": proba
+                        }).sort_values("Probabilidad", ascending=False)
+                        st.subheader("Distribucion de Probabilidades")
+                        st.bar_chart(proba_df.set_index("Genero"), height=400, color="#7c3aed")
 
-            except Exception as e:
-                import traceback
-                st.error(f"Error al procesar el audio: {e}")
-                with st.expander("Ver detalle del error"):
-                    st.code(traceback.format_exc(), language="text")
-                st.markdown("""
-                    <div class="doc-card" style="margin-top:1rem;">
-                        <p style="color:#b0b8cc;font-size:0.9rem;">
-                            Sugerencia: Verifica que el archivo sea un audio valido.
-                            Si el problema persiste, intenta con un archivo WAV de 30 segundos. Los formatos
-                            MP3 requieren ffmpeg (debe estar instalado en el servidor).
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
+                    with st.expander("Ver caracteristicas extraidas (33 features)"):
+                        feat_df = pd.DataFrame([feat]).T.reset_index()
+                        feat_df.columns = ["Caracteristica", "Valor"]
+                        feat_df["Valor"] = feat_df["Valor"].round(4)
+                        st.dataframe(feat_df, use_container_width=True, height=400)
+
+                except Exception as e:
+                    import traceback
+                    st.error(f"Error al procesar el audio: {e}")
+                    with st.expander("Ver detalle del error"):
+                        st.code(traceback.format_exc(), language="text")
+                    st.markdown("""
+                        <div class="doc-card" style="margin-top:1rem;">
+                            <p style="color:#b0b8cc;font-size:0.9rem;">
+                                Sugerencia: Verifica que el archivo sea un audio valido.
+                                Si el problema persiste, intenta con un archivo WAV de 30 segundos. Los formatos
+                                MP3 requieren ffmpeg (debe estar instalado en el servidor).
+                            </p>
+                        </div>
+                    """, unsafe_allow_html=True)
+        elif duration_sec < 30:
+            st.session_state["auto_classified"] = False
 
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
@@ -597,8 +696,8 @@ def pagina_clasificador():
             <h3>Como funciona?</h3>
             <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;margin-top:1rem;">
                 <div class="step-indicator"><span class="step-number">1</span><span class="step-content"><strong>Carga</strong> tu archivo de audio</span></div>
-                <div class="step-indicator"><span class="step-number">2</span><span class="step-content"><strong>Extraemos</strong> 33 características</span></div>
-                <div class="step-indicator"><span class="step-number">3</span><span class="step-content"><strong>Predecimos</strong> el género con Stacking Ensemble</span></div>
+                <div class="step-indicator"><span class="step-number">2</span><span class="step-content"><strong>Extraemos</strong> 33 caracteristicas</span></div>
+                <div class="step-indicator"><span class="step-number">3</span><span class="step-content"><strong>Predecimos</strong> el genero con Stacking Ensemble</span></div>
                 <div class="step-indicator"><span class="step-number">4</span><span class="step-content"><strong>Visualizas</strong> probabilidades y features</span></div>
             </div>
         </div>
@@ -689,15 +788,15 @@ def pagina_modelo():
             import seaborn as sns
             cm = np.array(cm_best["matrix"])
             labels = cm_best["labels"]
-            fig, ax = plt.subplots(figsize=(10, 8))
-            sns.heatmap(cm, annot=True, fmt="d", cmap="Purples",
+            fig, ax = plt.subplots(figsize=(6, 4.8))
+            sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":7},
                         xticklabels=labels, yticklabels=labels, ax=ax)
-            ax.set_xlabel("Predicho", fontsize=11, fontweight=600)
-            ax.set_ylabel("Real", fontsize=11, fontweight=600)
-            ax.set_title("Matriz de Confusión", fontsize=14, fontweight=700)
+            ax.set_xlabel("Predicho", fontsize=9, fontweight=600)
+            ax.set_ylabel("Real", fontsize=9, fontweight=600)
+            ax.set_title("Matriz de Confusion", fontsize=11, fontweight=700)
             fig.patch.set_facecolor('#0a0a1a')
             ax.set_facecolor('#1a1040')
-            ax.tick_params(colors='white')
+            ax.tick_params(colors='white', labelsize=7)
             ax.xaxis.label.set_color('white')
             ax.yaxis.label.set_color('white')
             ax.title.set_color('white')
@@ -706,17 +805,17 @@ def pagina_modelo():
     with fi_tab:
         top_n = min(15, len(importance_df))
         top_feat = importance_df.head(top_n)
-        fig2, ax2 = plt.subplots(figsize=(10, 7))
+        fig2, ax2 = plt.subplots(figsize=(6, 4.5))
         colors = plt.cm.Purples(np.linspace(0.3, 0.9, top_n))[::-1]
         bars = ax2.barh(range(top_n), top_feat["importance"].values, color=colors)
         ax2.set_yticks(range(top_n))
-        ax2.set_yticklabels(top_feat["feature"].values, fontsize=9)
+        ax2.set_yticklabels(top_feat["feature"].values, fontsize=7)
         ax2.invert_yaxis()
-        ax2.set_xlabel("Importancia Relativa", fontsize=11, fontweight=600)
-        ax2.set_title(f"Top {top_n} Características más Importantes", fontsize=13, fontweight=700)
+        ax2.set_xlabel("Importancia Relativa", fontsize=9, fontweight=600)
+        ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=11, fontweight=700)
         fig2.patch.set_facecolor('#0a0a1a')
         ax2.set_facecolor('#1a1040')
-        ax2.tick_params(colors='white')
+        ax2.tick_params(colors='white', labelsize=7)
         ax2.xaxis.label.set_color('white')
         ax2.title.set_color('white')
         for bar in bars:
@@ -752,7 +851,7 @@ def pagina_modelo():
         }
         colors_models = ['#a78bfa', '#7c3aed', '#6d28d9', '#c4b5fd']
         auc_data = []
-        roc_fig, roc_ax = plt.subplots(figsize=(10, 8))
+        roc_fig, roc_ax = plt.subplots(figsize=(7, 5))
         for idx, (mkey, mname) in enumerate(model_names.items()):
             if mkey in roc_data:
                 micro = roc_data[mkey]['micro']
@@ -773,7 +872,7 @@ def pagina_modelo():
         roc_ax.title.set_color('white')
         st.pyplot(roc_fig)
 
-        pr_fig, pr_ax = plt.subplots(figsize=(10, 8))
+        pr_fig, pr_ax = plt.subplots(figsize=(7, 5))
         for idx, (mkey, mname) in enumerate(model_names.items()):
             if mkey in pr_data:
                 micro = pr_data[mkey]['micro']
@@ -798,7 +897,7 @@ def pagina_modelo():
         with st.expander("Ver curvas por clase (Stacking Ensemble)"):
             stacking_roc = roc_data.get('stacking_ensemble', {})
             if 'per_class' in stacking_roc:
-                fig3, ax3 = plt.subplots(figsize=(10, 8))
+                fig3, ax3 = plt.subplots(figsize=(7, 5))
                 colors_genre = plt.cm.Purples(np.linspace(0.3, 0.9, len(genres)))
                 for i, g in enumerate(genres):
                     if g in stacking_roc['per_class']:
