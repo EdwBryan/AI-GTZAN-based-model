@@ -609,7 +609,7 @@ def pagina_clasificador():
             st.error(f"Audio demasiado corto ({duration_sec:.1f}s). Se requieren al menos 30 segundos para un analisis optimo.")
             max_end = float(duration_sec)
         else:
-            max_end = float(min(duration_sec, 60))
+            max_end = float(duration_sec)
 
         # Full audio player
         st.markdown("### Audio Original")
@@ -1151,13 +1151,13 @@ def pagina_informe():
     """, unsafe_allow_html=True)
 
 pages = [
-    st.Page(pagina_inicio, title="Inicio"),
-    st.Page(pagina_documentacion, title="Documentación"),
-    st.Page(pagina_codigo, title="Código del Sistema"),
-    st.Page(pagina_pruebas, title="Pruebas del Sistema"),
-    st.Page(pagina_clasificador, title="Clasificador"),
-    st.Page(pagina_modelo, title="Modelo"),
-    st.Page(pagina_informe, title="Informe"),
+    st.Page(pagina_inicio, title="Inicio", icon=":material/home:"),
+    st.Page(pagina_documentacion, title="Documentación", icon=":material/description:"),
+    st.Page(pagina_codigo, title="Código del Sistema", icon=":material/code:"),
+    st.Page(pagina_pruebas, title="Pruebas del Sistema", icon=":material/bar_chart:"),
+    st.Page(pagina_clasificador, title="Clasificador", icon=":material/music_note:"),
+    st.Page(pagina_modelo, title="Modelo", icon=":material/psychology:"),
+    st.Page(pagina_informe, title="Informe", icon=":material/assignment:"),
 ]
 
 st.sidebar.markdown("""
