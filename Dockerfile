@@ -14,6 +14,8 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
 COPY gtzan_selected_features.csv .
+COPY *.ipynb ./
+COPY Dockerfile .
 
 RUN python3 app/train_and_save.py
 

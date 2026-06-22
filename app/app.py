@@ -12,8 +12,8 @@ ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
 APP_DIR = Path(__file__).parent
 ROOT_DIR = APP_DIR.parent
 NOTEBOOK_FILES = {
-    "IA-Model.ipynb": APP_DIR / "IA-Model.ipynb",
-    "ETL.ipynb": APP_DIR / "ETL.ipynb",
+    "IA-Model.ipynb": ROOT_DIR / "IA-Model.ipynb",
+    "ETL.ipynb": ROOT_DIR / "ETL.ipynb",
 }
 CODE_FILES = {
     "train_and_save.py": APP_DIR / "train_and_save.py",
@@ -21,7 +21,7 @@ CODE_FILES = {
     "app.py": APP_DIR / "app.py",
 }
 ROOT_FILES = {
-    "Dockerfile": APP_DIR / "Dockerfile",
+    "Dockerfile": ROOT_DIR / "Dockerfile",
 }
 
 @st.cache_resource
@@ -444,11 +444,17 @@ def pagina_pruebas():
 
     with col2:
         st.markdown('<div class="doc-card fade-in"><h3>Precision por Genero (Stacking)</h3></div>', unsafe_allow_html=True)
-        class_acc_df = pd.DataFrame([
-            {"Género": g.capitalize(), "Precisión": f"{v:.1%}"}
-            for g, v in sorted(metadata["class_accuracy"].items(), key=lambda x: x[1], reverse=True)
-        ])
-        st.dataframe(class_acc_df, hide_index=True, use_container_width=True)
+        rows_html = ""
+        for g, v in sorted(metadata["class_accuracy"].items(), key=lambda x: x[1], reverse=True):
+            rows_html += f"<tr><td style='padding:0.4rem 0.8rem;color:#e2e8f0;text-transform:capitalize;'>{g}</td><td style='padding:0.4rem 0.8rem;color:#a78bfa;font-weight:600;'>{v:.1%}</td></tr>"
+        st.markdown(f"""
+        <div style="overflow-x:auto;margin:1rem 0;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.85rem;border-radius:14px;overflow:hidden;background:rgba(30,27,75,0.2);border:1px solid rgba(124,58,237,0.08);">
+                <tr style="background:rgba(124,58,237,0.12);"><th style="padding:0.5rem 0.8rem;text-align:left;color:#c4b5fd;font-weight:700;">Genero</th><th style="padding:0.5rem 0.8rem;text-align:left;color:#c4b5fd;font-weight:700;">Precision</th></tr>
+                {rows_html}
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
 
         mejor_genre = max(metadata["class_accuracy"], key=metadata["class_accuracy"].get)
         peor_genre = min(metadata["class_accuracy"], key=metadata["class_accuracy"].get)
@@ -469,19 +475,19 @@ def pagina_pruebas():
         import seaborn as sns
         cm = np.array(cm_best["matrix"])
         labels = cm_best["labels"]
-        fig, ax = plt.subplots(figsize=(5, 4))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":6},
+        fig, ax = plt.subplots(figsize=(4, 3))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":5},
                     xticklabels=labels, yticklabels=labels, ax=ax)
-        ax.set_xlabel("Predicho", fontsize=9, fontweight=600)
-        ax.set_ylabel("Real", fontsize=9, fontweight=600)
-        ax.set_title(f"Matriz de Confusion - Stacking Ensemble ({metadata['test_accuracy']:.1%})", fontsize=10, fontweight=700)
+        ax.set_xlabel("Predicho", fontsize=8, fontweight=600)
+        ax.set_ylabel("Real", fontsize=8, fontweight=600)
+        ax.set_title(f"Matriz de Confusion - Stacking Ensemble ({metadata['test_accuracy']:.1%})", fontsize=9, fontweight=700)
         fig.patch.set_facecolor('#0a0a1a')
         ax.set_facecolor('#1a1040')
-        ax.tick_params(colors='white', labelsize=6)
+        ax.tick_params(colors='white', labelsize=5)
         ax.xaxis.label.set_color('white')
         ax.yaxis.label.set_color('white')
         ax.title.set_color('white')
-        col_cm, _ = st.columns([3, 1])
+        col_cm, _ = st.columns([2, 3])
         with col_cm:
             st.pyplot(fig)
 
@@ -508,35 +514,45 @@ def pagina_pruebas():
     st.markdown('<div class="section-title">Importancia de Caracteristicas (Random Forest 500 arboles)</div>', unsafe_allow_html=True)
     top_n = min(15, len(importance_df))
     top_feat = importance_df.head(top_n)
-    fig2, ax2 = plt.subplots(figsize=(5, 3.5))
+    fig2, ax2 = plt.subplots(figsize=(4, 2.8))
     colors = plt.cm.Purples(np.linspace(0.3, 0.9, top_n))[::-1]
     bars = ax2.barh(range(top_n), top_feat["importance"].values, color=colors)
     ax2.set_yticks(range(top_n))
-    ax2.set_yticklabels(top_feat["feature"].values, fontsize=6)
+    ax2.set_yticklabels(top_feat["feature"].values, fontsize=5)
     ax2.invert_yaxis()
-    ax2.set_xlabel("Importancia", fontsize=9, fontweight=600)
-    ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=10, fontweight=700)
+    ax2.set_xlabel("Importancia", fontsize=8, fontweight=600)
+    ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=9, fontweight=700)
     fig2.patch.set_facecolor('#0a0a1a')
     ax2.set_facecolor('#1a1040')
-    ax2.tick_params(colors='white', labelsize=6)
+    ax2.tick_params(colors='white', labelsize=5)
     ax2.xaxis.label.set_color('white')
     ax2.title.set_color('white')
     for bar in bars:
         bar.set_edgecolor((0.486, 0.227, 0.929, 0.3))
         bar.set_linewidth(0.5)
-    col_fi, _ = st.columns([3, 1])
+    col_fi, _ = st.columns([2, 3])
     with col_fi:
         st.pyplot(fig2)
 
     st.markdown('<div class="section-title">Reporte de Clasificacion (Stacking)</div>', unsafe_allow_html=True)
     report = metadata.get("classification_report", {})
-    report_df = pd.DataFrame(report).T
-    if "accuracy" in report_df.index:
-        report_df = report_df.drop("accuracy")
-    st.dataframe(report_df.style.format({
-        "precision": "{:.2%}", "recall": "{:.2%}",
-        "f1-score": "{:.2%}", "support": "{:.0f}"
-    }), use_container_width=True)
+    rows_html = ""
+    for genero, metrics in report.items():
+        if genero in ("accuracy", "macro avg", "weighted avg"):
+            continue
+        precision = metrics.get("precision", 0)
+        recall = metrics.get("recall", 0)
+        f1 = metrics.get("f1-score", 0)
+        support = metrics.get("support", 0)
+        rows_html += f"<tr><td style='padding:0.4rem 0.6rem;color:#c4b5fd;text-transform:capitalize;'>{genero}</td><td style='padding:0.4rem 0.6rem;color:#a78bfa;font-weight:600;'>{precision:.1%}</td><td style='padding:0.4rem 0.6rem;color:#a78bfa;'>{recall:.1%}</td><td style='padding:0.4rem 0.6rem;color:#a78bfa;'>{f1:.1%}</td><td style='padding:0.4rem 0.6rem;color:#8b9dc3;'>{support}</td></tr>"
+    st.markdown(f"""
+    <div style="overflow-x:auto;margin:0.5rem 0;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;border-radius:14px;overflow:hidden;background:rgba(30,27,75,0.2);border:1px solid rgba(124,58,237,0.08);">
+            <tr style="background:rgba(124,58,237,0.12);"><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Genero</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Precision</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Recall</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">F1-Score</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Support</th></tr>
+            {rows_html}
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Prueba Rapida de Clasificacion</div>', unsafe_allow_html=True)
     st.markdown("""
@@ -575,49 +591,102 @@ def pagina_clasificador():
 
     trim_start = 0.0
     trim_end = 30.0
-    classify_clicked = False
+    result_shown = st.session_state.get("result_shown", False)
 
     if uploaded is not None:
         file_bytes = uploaded.read()
-        # get duration with pydub
         try:
             from pydub import AudioSegment
             import io
             audio_seg = AudioSegment.from_file(io.BytesIO(file_bytes))
             duration_sec = len(audio_seg) / 1000.0
         except Exception:
-            # fallback: load with librosa just for duration
             y_tmp, sr_tmp = load_audio(file_bytes)
             duration_sec = len(y_tmp) / sr_tmp
             audio_seg = None
 
-        st.info(f"Duracion del audio: {duration_sec:.1f}s" + (" (se recomiendan 30s)" if duration_sec > 35 else ""))
+        if duration_sec < 30:
+            st.error(f"Audio demasiado corto ({duration_sec:.1f}s). Se requieren al menos 30 segundos para un analisis optimo.")
+            max_end = float(duration_sec)
+        else:
+            max_end = float(min(duration_sec, 60))
 
-        play_col, trim_col = st.columns([1, 1])
-        with play_col:
-            st.audio(file_bytes, format=f"audio/{uploaded.type.split('/')[-1] if '/' in uploaded.type else 'wav'}")
+        # Full audio player
+        st.markdown("### Audio Original")
+        st.audio(file_bytes, format=f"audio/{uploaded.type.split('/')[-1] if '/' in uploaded.type else 'wav'}")
 
-        with trim_col:
-            if duration_sec < 30:
-                st.error(f"Audio demasiado corto ({duration_sec:.1f}s). Se requieren al menos 30 segundos para un analisis optimo.")
-                max_end = float(duration_sec)
-            else:
-                max_end = float(min(duration_sec, 60))
-                trim_range = st.slider(
-                    "Selecciona el segmento a analizar:",
-                    0.0, max_end, (0.0, min(30.0, max_end)),
-                    0.5, format="%.1fs"
-                )
-                trim_start, trim_end = trim_range
-
+        # Waveform visualization
         if duration_sec >= 30:
-            classify_clicked = st.button("Clasificar segmento seleccionado", type="primary", use_container_width=True)
+            import matplotlib.pyplot as plt
+            import librosa
+            y_full, sr_full = load_audio(file_bytes)
+            time_axis = np.linspace(0, len(y_full)/sr_full, len(y_full))
+            fig_wave, ax_wave = plt.subplots(figsize=(9, 1.8))
+            ax_wave.plot(time_axis, y_full, color='#a78bfa', linewidth=0.3, alpha=0.7)
+            if "trim_start" in st.session_state and "trim_end" in st.session_state:
+                ts = st.session_state["trim_start"]
+                te = st.session_state["trim_end"]
+                mask = (time_axis >= ts) & (time_axis <= te)
+                ax_wave.fill_between(time_axis, y_full, where=mask, color='#7c3aed', alpha=0.3)
+                ax_wave.axvline(ts, color='#fbbf24', linewidth=0.8, linestyle='--')
+                ax_wave.axvline(te, color='#fbbf24', linewidth=0.8, linestyle='--')
+            ax_wave.set_xlabel("Tiempo (s)", fontsize=8, color='#6b7280')
+            ax_wave.set_ylabel("Amplitud", fontsize=8, color='#6b7280')
+            ax_wave.set_title("Forma de onda — segmento seleccionado en amarillo", fontsize=9, fontweight=600, color='#8b9dc3')
+            fig_wave.patch.set_facecolor('#0a0a1a')
+            ax_wave.set_facecolor('#0a0a1a')
+            ax_wave.tick_params(colors='#6b7280', labelsize=7)
+            ax_wave.xaxis.label.set_color('#6b7280')
+            ax_wave.yaxis.label.set_color('#6b7280')
+            ax_wave.title.set_color('#8b9dc3')
+            col_wave, _ = st.columns([4, 1])
+            with col_wave:
+                st.pyplot(fig_wave)
 
-        if classify_clicked or (duration_sec >= 30 and st.session_state.get("auto_classified", False)):
-            st.session_state["auto_classified"] = True
+            # Slider
+            trim_range = st.slider(
+                "Selecciona el segmento a analizar:",
+                0.0, max_end, (0.0, min(30.0, max_end)),
+                0.5, format="%.1fs",
+                disabled=result_shown,
+                key="trim_slider"
+            )
+            trim_start, trim_end = trim_range
+            st.session_state["trim_start"] = trim_start
+            st.session_state["trim_end"] = trim_end
+
+            # Preview the trimmed segment
+            st.markdown("### Vista Previa del Segmento")
+            if audio_seg is not None:
+                start_ms = int(trim_start * 1000)
+                end_ms = int(min(trim_end, duration_sec) * 1000)
+                trimmed_preview = audio_seg[start_ms:end_ms]
+                preview_buf = io.BytesIO()
+                trimmed_preview.export(preview_buf, format="wav")
+                preview_buf.seek(0)
+                st.audio(preview_buf, format="audio/wav")
+            else:
+                start_s = int(trim_start * sr_full)
+                end_s = int(min(trim_end, duration_sec) * sr_full)
+                preview_buf = io.BytesIO()
+                import soundfile as sf
+                sf.write(preview_buf, y_full[start_s:end_s], sr_full, format='wav')
+                preview_buf.seek(0)
+                st.audio(preview_buf, format="audio/wav")
+
+            # Classify button
+            if not result_shown:
+                if st.button("Clasificar segmento seleccionado", type="primary", use_container_width=True):
+                    st.session_state["result_shown"] = True
+                    st.rerun()
+            else:
+                if st.button("Nuevo analisis", use_container_width=True):
+                    st.session_state["result_shown"] = False
+                    st.rerun()
+
+        if result_shown and duration_sec >= 30:
             with st.spinner("Analizando audio y extrayendo caracteristicas..."):
                 try:
-                    # Trim audio
                     if audio_seg is not None:
                         start_ms = int(trim_start * 1000)
                         end_ms = int(min(trim_end, duration_sec) * 1000)
@@ -625,14 +694,12 @@ def pagina_clasificador():
                         wav_buf = io.BytesIO()
                         trimmed.export(wav_buf, format="wav")
                         wav_buf.seek(0)
-                        import librosa
                         y, sr = librosa.load(wav_buf, sr=22050, mono=True)
                     else:
-                        # fallback: slice array
-                        sr = sr_tmp
+                        sr = sr_full
                         start_s = int(trim_start * sr)
                         end_s = int(min(trim_end, duration_sec) * sr)
-                        y = y_tmp[start_s:end_s]
+                        y = y_full[start_s:end_s]
 
                     feat = extract_features_from_audio(y, sr)
                     df = pd.DataFrame([feat])
@@ -681,10 +748,18 @@ def pagina_clasificador():
                         st.bar_chart(proba_df.set_index("Genero"), height=400, color="#7c3aed")
 
                     with st.expander("Ver caracteristicas extraidas (33 features)"):
-                        feat_df = pd.DataFrame([feat]).T.reset_index()
-                        feat_df.columns = ["Caracteristica", "Valor"]
-                        feat_df["Valor"] = feat_df["Valor"].round(4)
-                        st.dataframe(feat_df, use_container_width=True, height=400)
+                        rows_html = ""
+                        for fname in feature_names:
+                            val = feat.get(fname, 0)
+                            rows_html += f"<tr><td style='padding:0.25rem 0.5rem;color:#fbbf24;font-family:monospace;font-size:0.7rem;'>{fname}</td><td style='padding:0.25rem 0.5rem;color:#a78bfa;font-weight:600;font-size:0.7rem;'>{val:.4f}</td></tr>"
+                        st.markdown(f"""
+                        <div style="overflow-x:auto;max-height:350px;overflow-y:auto;">
+                            <table style="width:100%;border-collapse:collapse;font-size:0.75rem;border-radius:10px;overflow:hidden;">
+                                <tr style="background:rgba(124,58,237,0.12);"><th style="padding:0.3rem 0.5rem;text-align:left;color:#c4b5fd;font-weight:700;position:sticky;top:0;">Feature</th><th style="padding:0.3rem 0.5rem;text-align:left;color:#c4b5fd;font-weight:700;position:sticky;top:0;">Valor</th></tr>
+                                {rows_html}
+                            </table>
+                        </div>
+                        """, unsafe_allow_html=True)
 
                 except Exception as e:
                     import traceback
@@ -804,62 +879,79 @@ def pagina_modelo():
         import seaborn as sns
         cm = np.array(cm_best["matrix"])
         labels = cm_best["labels"]
-        fig, ax = plt.subplots(figsize=(5, 4))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":6},
-                    xticklabels=labels, yticklabels=labels, ax=ax)
-        ax.set_xlabel("Predicho", fontsize=9, fontweight=600)
-        ax.set_ylabel("Real", fontsize=9, fontweight=600)
-        ax.set_title("Matriz de Confusion", fontsize=10, fontweight=700)
-        fig.patch.set_facecolor('#0a0a1a')
-        ax.set_facecolor('#1a1040')
-        ax.tick_params(colors='white', labelsize=6)
-        ax.xaxis.label.set_color('white')
-        ax.yaxis.label.set_color('white')
-        ax.title.set_color('white')
-        col_cm, _ = st.columns([3, 1])
-        with col_cm:
-            st.pyplot(fig)
+        fig, ax = plt.subplots(figsize=(4, 3))
+            sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":5},
+                        xticklabels=labels, yticklabels=labels, ax=ax)
+            ax.set_xlabel("Predicho", fontsize=8, fontweight=600)
+            ax.set_ylabel("Real", fontsize=8, fontweight=600)
+            ax.set_title("Matriz de Confusion", fontsize=9, fontweight=700)
+            fig.patch.set_facecolor('#0a0a1a')
+            ax.set_facecolor('#1a1040')
+            ax.tick_params(colors='white', labelsize=5)
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+            ax.title.set_color('white')
+            col_cm, _ = st.columns([2, 3])
+            with col_cm:
+                st.pyplot(fig)
 
     st.markdown('<div class="section-title">Importancia de Caracteristicas</div>', unsafe_allow_html=True)
     top_n = min(15, len(importance_df))
     top_feat = importance_df.head(top_n)
-    fig2, ax2 = plt.subplots(figsize=(5, 3.5))
+    fig2, ax2 = plt.subplots(figsize=(4, 2.8))
     colors = plt.cm.Purples(np.linspace(0.3, 0.9, top_n))[::-1]
     bars = ax2.barh(range(top_n), top_feat["importance"].values, color=colors)
     ax2.set_yticks(range(top_n))
-    ax2.set_yticklabels(top_feat["feature"].values, fontsize=6)
+    ax2.set_yticklabels(top_feat["feature"].values, fontsize=5)
     ax2.invert_yaxis()
-    ax2.set_xlabel("Importancia Relativa", fontsize=9, fontweight=600)
-    ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=10, fontweight=700)
+    ax2.set_xlabel("Importancia Relativa", fontsize=8, fontweight=600)
+    ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=9, fontweight=700)
     fig2.patch.set_facecolor('#0a0a1a')
     ax2.set_facecolor('#1a1040')
-    ax2.tick_params(colors='white', labelsize=6)
+    ax2.tick_params(colors='white', labelsize=5)
     ax2.xaxis.label.set_color('white')
     ax2.title.set_color('white')
     for bar in bars:
         bar.set_edgecolor((0.486, 0.227, 0.929, 0.3))
         bar.set_linewidth(0.5)
-    col_fi, _ = st.columns([3, 1])
+    col_fi, _ = st.columns([2, 3])
     with col_fi:
         st.pyplot(fig2)
 
     with st.expander("Ver tabla completa de importancia"):
-        st.dataframe(importance_df, use_container_width=True)
+        rows_html = ""
+        for _, row in importance_df.iterrows():
+            rows_html += f"<tr><td style='padding:0.3rem 0.5rem;color:#fbbf24;font-family:monospace;font-size:0.75rem;'>{row['feature']}</td><td style='padding:0.3rem 0.5rem;color:#a78bfa;font-weight:600;'>{row['importance']:.4f}</td></tr>"
+        st.markdown(f"""
+        <div style="overflow-x:auto;max-height:300px;overflow-y:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.8rem;border-radius:10px;overflow:hidden;">
+                <tr style="background:rgba(124,58,237,0.12);"><th style="padding:0.4rem 0.5rem;text-align:left;color:#c4b5fd;font-weight:700;position:sticky;top:0;">Feature</th><th style="padding:0.4rem 0.5rem;text-align:left;color:#c4b5fd;font-weight:700;position:sticky;top:0;">Importancia</th></tr>
+                {rows_html}
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Reporte de Clasificacion</div>', unsafe_allow_html=True)
     report = metadata.get("classification_report", {})
-    report_df = pd.DataFrame(report).T
-    if "accuracy" in report_df.index:
-        st.metric("Accuracy Global", f"{report_df.loc['accuracy', 'precision']:.2%}" if 'precision' in report_df.columns else "N/A")
-        report_df = report_df.drop("accuracy")
-    if "macro avg" in report_df.index:
-        report_df = report_df.drop("macro avg")
-    if "weighted avg" in report_df.index:
-        report_df = report_df.drop("weighted avg")
-    st.dataframe(report_df.style.format({
-        "precision": "{:.2%}", "recall": "{:.2%}",
-        "f1-score": "{:.2%}", "support": "{:.0f}"
-    }), use_container_width=True)
+    if "accuracy" in report:
+        st.metric("Accuracy Global", f"{report['accuracy']:.2%}" if isinstance(report['accuracy'], (int, float)) else "N/A")
+    rows_html = ""
+    for genero, metrics in report.items():
+        if genero in ("accuracy", "macro avg", "weighted avg"):
+            continue
+        precision = metrics.get("precision", 0)
+        recall = metrics.get("recall", 0)
+        f1 = metrics.get("f1-score", 0)
+        support = metrics.get("support", 0)
+        rows_html += f"<tr><td style='padding:0.4rem 0.6rem;color:#c4b5fd;text-transform:capitalize;'>{genero}</td><td style='padding:0.4rem 0.6rem;color:#a78bfa;font-weight:600;'>{precision:.1%}</td><td style='padding:0.4rem 0.6rem;color:#a78bfa;'>{recall:.1%}</td><td style='padding:0.4rem 0.6rem;color:#a78bfa;'>{f1:.1%}</td><td style='padding:0.4rem 0.6rem;color:#8b9dc3;'>{support}</td></tr>"
+    st.markdown(f"""
+    <div style="overflow-x:auto;margin:0.5rem 0;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;border-radius:14px;overflow:hidden;background:rgba(30,27,75,0.2);border:1px solid rgba(124,58,237,0.08);">
+            <tr style="background:rgba(124,58,237,0.12);"><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Genero</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Precision</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Recall</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">F1-Score</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Support</th></tr>
+            {rows_html}
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Curvas ROC / PR</div>', unsafe_allow_html=True)
     import matplotlib.pyplot as plt
@@ -874,7 +966,7 @@ def pagina_modelo():
 
     rokcol1, rokcol2 = st.columns(2)
     with rokcol1:
-        roc_fig, roc_ax = plt.subplots(figsize=(5.5, 4))
+        roc_fig, roc_ax = plt.subplots(figsize=(4.5, 3.2))
         for idx, (mkey, mname) in enumerate(model_names.items()):
             if mkey in roc_data:
                 micro = roc_data[mkey]['micro']
@@ -883,10 +975,10 @@ def pagina_modelo():
                 auc_data.append({"Modelo": mname, "ROC-AUC Macro": f"{roc_data[mkey]['macro_auc']:.4f}",
                                 "ROC-AUC Micro": f"{micro['auc']:.4f}"})
         roc_ax.plot([0, 1], [0, 1], 'k--', alpha=0.3, label='Random')
-        roc_ax.set_xlabel("False Positive Rate", fontsize=11)
-        roc_ax.set_ylabel("True Positive Rate", fontsize=11)
-        roc_ax.set_title("ROC Curves — Comparación (Micro-average)", fontsize=12, fontweight=700)
-        roc_ax.legend(loc='lower right', fontsize=8)
+        roc_ax.set_xlabel("False Positive Rate", fontsize=9)
+        roc_ax.set_ylabel("True Positive Rate", fontsize=9)
+        roc_ax.set_title("ROC Curves — Comparación (Micro-average)", fontsize=10, fontweight=700)
+        roc_ax.legend(loc='lower right', fontsize=7)
         roc_fig.patch.set_facecolor('#0a0a1a')
         roc_ax.set_facecolor('#1a1040')
         roc_ax.tick_params(colors='white')
@@ -896,16 +988,16 @@ def pagina_modelo():
         st.pyplot(roc_fig)
 
     with rokcol2:
-        pr_fig, pr_ax = plt.subplots(figsize=(5.5, 4))
+        pr_fig, pr_ax = plt.subplots(figsize=(4.5, 3.2))
         for idx, (mkey, mname) in enumerate(model_names.items()):
             if mkey in pr_data:
                 micro = pr_data[mkey]['micro']
                 pr_ax.plot(micro['recall'], micro['precision'], color=colors_models[idx],
                           label=f"{mname} (AUC={micro['auc']:.3f})", linewidth=2)
-        pr_ax.set_xlabel("Recall", fontsize=11)
-        pr_ax.set_ylabel("Precision", fontsize=11)
-        pr_ax.set_title("Precision-Recall Curves — Comparación (Micro-average)", fontsize=12, fontweight=700)
-        pr_ax.legend(loc='lower left', fontsize=8)
+        pr_ax.set_xlabel("Recall", fontsize=9)
+        pr_ax.set_ylabel("Precision", fontsize=9)
+        pr_ax.set_title("Precision-Recall Curves — Comparación (Micro-average)", fontsize=10, fontweight=700)
+        pr_ax.legend(loc='lower left', fontsize=7)
         pr_fig.patch.set_facecolor('#0a0a1a')
         pr_ax.set_facecolor('#1a1040')
         pr_ax.tick_params(colors='white')
@@ -915,13 +1007,22 @@ def pagina_modelo():
         st.pyplot(pr_fig)
 
     st.markdown("### AUC Scores por Modelo")
-    auc_df = pd.DataFrame(auc_data)
-    st.dataframe(auc_df, hide_index=True, use_container_width=True)
+    rows_html = ""
+    for d in auc_data:
+        rows_html += f"<tr><td style='padding:0.4rem 0.6rem;color:#c4b5fd;font-weight:600;'>{d['Modelo']}</td><td style='padding:0.4rem 0.6rem;color:#a78bfa;'>{d.get('ROC-AUC Macro','N/A')}</td><td style='padding:0.4rem 0.6rem;color:#a78bfa;'>{d.get('ROC-AUC Micro','N/A')}</td></tr>"
+    st.markdown(f"""
+    <div style="overflow-x:auto;margin:0.5rem 0;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;border-radius:14px;overflow:hidden;background:rgba(30,27,75,0.2);border:1px solid rgba(124,58,237,0.08);">
+            <tr style="background:rgba(124,58,237,0.12);"><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Modelo</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">ROC-AUC Macro</th><th style="padding:0.5rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">ROC-AUC Micro</th></tr>
+            {rows_html}
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("Ver curvas por clase (Stacking Ensemble)"):
         stacking_roc = roc_data.get('stacking_ensemble', {})
         if 'per_class' in stacking_roc:
-            fig3, ax3 = plt.subplots(figsize=(5.5, 4))
+            fig3, ax3 = plt.subplots(figsize=(4.5, 3.2))
             colors_genre = plt.cm.Purples(np.linspace(0.3, 0.9, len(genres)))
             for i, g in enumerate(genres):
                 if g in stacking_roc['per_class']:
