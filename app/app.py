@@ -403,11 +403,17 @@ def pagina_pruebas():
     st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Resultados de la evaluación de 4 modelos, pruebas del sistema y análisis de errores.</p>', unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Comparación de Modelos</div>', unsafe_allow_html=True)
-    comp_df = pd.DataFrame([
-        {"Modelo": k.replace("_", " ").title(), "Test Accuracy": f'{v["accuracy"]:.2%}', "CV (k=5)": f'{v["cv_mean"]:.2%}'}
-        for k, v in sorted(comparison.items(), key=lambda x: x[1]["accuracy"], reverse=True)
-    ])
-    st.dataframe(comp_df, hide_index=True, use_container_width=True)
+    rows_html = ""
+    for k, v in sorted(comparison.items(), key=lambda x: x[1]["accuracy"], reverse=True):
+        rows_html += f"<tr><td style='padding:0.4rem 0.8rem;color:#c4b5fd;font-weight:600;'>{k}</td><td style='padding:0.4rem 0.8rem;color:#a78bfa;font-weight:600;'>{v['accuracy']:.2%}</td><td style='padding:0.4rem 0.8rem;color:#8b9dc3;'>{v['cv_mean']:.2%}</td></tr>"
+    st.markdown(f"""
+    <div style="overflow-x:auto;margin:0.5rem 0;">
+        <table style="width:100%;border-collapse:collapse;background:rgba(30,27,75,0.25);border-radius:14px;overflow:hidden;font-size:0.85rem;">
+            <tr style="background:rgba(124,58,237,0.15);"><th style="padding:0.6rem 0.8rem;text-align:left;color:#c4b5fd;font-weight:700;">Modelo</th><th style="padding:0.6rem 0.8rem;text-align:left;color:#c4b5fd;font-weight:700;">Test Accuracy</th><th style="padding:0.6rem 0.8rem;text-align:left;color:#c4b5fd;font-weight:700;">CV (k=5)</th></tr>
+            {rows_html}
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown(f'<p style="color:#a78bfa;font-weight:600;">Mejor: Stacking Ensemble ({metadata["test_accuracy"]:.1%}) - Combina RF (300) + SVM (RBF, C=10) + LogisticRegression</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
@@ -594,9 +600,9 @@ def pagina_clasificador():
         with trim_col:
             if duration_sec < 30:
                 st.error(f"Audio demasiado corto ({duration_sec:.1f}s). Se requieren al menos 30 segundos para un analisis optimo.")
-                max_end = duration_sec
+                max_end = float(duration_sec)
             else:
-                max_end = min(duration_sec, 60)
+                max_end = float(min(duration_sec, 60))
                 trim_range = st.slider(
                     "Selecciona el segmento a analizar:",
                     0.0, max_end, (0.0, min(30.0, max_end)),
@@ -721,19 +727,18 @@ def pagina_modelo():
     st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Detalles técnicos del modelo de clasificación entrenado. Se evaluaron 4 modelos: el Stacking Ensemble es el mejor con un 75% de accuracy.</p>', unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Comparación de Modelos</div>', unsafe_allow_html=True)
-    comp_df = pd.DataFrame([
-        {"Modelo": k.replace("_", " ").title(), "Accuracy": f'{v["accuracy"]:.2%}', "CV (k=5)": f'{v["cv_mean"]:.2%} ± {v["cv_std"]:.2%}'}
-        for k, v in sorted(comparison.items(), key=lambda x: x[1]["accuracy"], reverse=True)
-    ])
-    cols = st.columns([1, 2, 2])
-    cols[0].markdown("**Modelo**")
-    cols[1].markdown("**Test Accuracy**")
-    cols[2].markdown("**Cross-Validation (k=5)**")
-    for _, row in comp_df.iterrows():
-        c1, c2, c3 = st.columns([1, 2, 2])
-        c1.markdown(f'{row["Modelo"]}')
-        c2.markdown(f'**{row["Accuracy"]}**' if "Stacking" in row["Modelo"] else row["Accuracy"])
-        c3.markdown(f'{row["CV (k=5)"]}')
+    rows_html = ""
+    for k, v in sorted(comparison.items(), key=lambda x: x[1]["accuracy"], reverse=True):
+        is_best = "Stacking" in k
+        rows_html += f"<tr><td style='padding:0.4rem 0.8rem;color:#c4b5fd;font-weight:600;'>{k}</td><td style='padding:0.4rem 0.8rem;color:#a78bfa;font-weight:600;'>{v['accuracy']:.2%}</td><td style='padding:0.4rem 0.8rem;color:#8b9dc3;'>{v['cv_mean']:.2%} ± {v['cv_std']:.2%}</td></tr>"
+    st.markdown(f"""
+    <div style="overflow-x:auto;margin:0.5rem 0;">
+        <table style="width:100%;border-collapse:collapse;background:rgba(30,27,75,0.25);border-radius:14px;overflow:hidden;font-size:0.85rem;">
+            <tr style="background:rgba(124,58,237,0.15);"><th style="padding:0.6rem 0.8rem;text-align:left;color:#c4b5fd;font-weight:700;">Modelo</th><th style="padding:0.6rem 0.8rem;text-align:left;color:#c4b5fd;font-weight:700;">Test Accuracy</th><th style="padding:0.6rem 0.8rem;text-align:left;color:#c4b5fd;font-weight:700;">Cross-Validation (k=5)</th></tr>
+            {rows_html}
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown(f'<p style="color:#a78bfa;font-weight:600;">Mejor modelo: Stacking Ensemble ({metadata["test_accuracy"]:.1%})</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns([1, 1])
@@ -779,89 +784,96 @@ def pagina_modelo():
 
     with col2:
         st.markdown('<div class="doc-card fade-in" style="padding:1rem;"><h3 style="font-size:1rem;">Precision por Genero (Stacking)</h3></div>', unsafe_allow_html=True)
-        class_acc_df = pd.DataFrame([
-            {"Género": g.capitalize(), "Precisión": f"{v:.1%}"}
-            for g, v in sorted(metadata["class_accuracy"].items(), key=lambda x: x[1], reverse=True)
-        ])
-        st.dataframe(class_acc_df, hide_index=True, use_container_width=True)
+        rows_html = ""
+        for g, v in sorted(metadata["class_accuracy"].items(), key=lambda x: x[1], reverse=True):
+            rows_html += f"<tr><td style='padding:0.3rem 0.6rem;color:#e2e8f0;text-transform:capitalize;'>{g}</td><td style='padding:0.3rem 0.6rem;color:#a78bfa;font-weight:600;'>{v:.1%}</td></tr>"
+        st.markdown(f"""
+        <div style="overflow-x:auto;margin:0.3rem 0;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.8rem;border-radius:10px;overflow:hidden;">
+                <tr style="background:rgba(124,58,237,0.12);"><th style="padding:0.4rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Genero</th><th style="padding:0.4rem 0.6rem;text-align:left;color:#c4b5fd;font-weight:700;">Precision</th></tr>
+                {rows_html}
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-    cm_tab, fi_tab, cr_tab, roc_tab = st.tabs(["Matriz de Confusion", "Importancia de Features", "Reporte de Clasificacion", "Curvas ROC / PR"])
-
-    with cm_tab:
-        if "matrix" in cm_best and "labels" in cm_best:
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-            cm = np.array(cm_best["matrix"])
-            labels = cm_best["labels"]
-            fig, ax = plt.subplots(figsize=(5, 4))
-            sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":6},
-                        xticklabels=labels, yticklabels=labels, ax=ax)
-            ax.set_xlabel("Predicho", fontsize=9, fontweight=600)
-            ax.set_ylabel("Real", fontsize=9, fontweight=600)
-            ax.set_title("Matriz de Confusion", fontsize=10, fontweight=700)
-            fig.patch.set_facecolor('#0a0a1a')
-            ax.set_facecolor('#1a1040')
-            ax.tick_params(colors='white', labelsize=6)
-            ax.xaxis.label.set_color('white')
-            ax.yaxis.label.set_color('white')
-            ax.title.set_color('white')
-            col_cm, _ = st.columns([3, 1])
-            with col_cm:
-                st.pyplot(fig)
-
-    with fi_tab:
-        top_n = min(15, len(importance_df))
-        top_feat = importance_df.head(top_n)
-        fig2, ax2 = plt.subplots(figsize=(5, 3.5))
-        colors = plt.cm.Purples(np.linspace(0.3, 0.9, top_n))[::-1]
-        bars = ax2.barh(range(top_n), top_feat["importance"].values, color=colors)
-        ax2.set_yticks(range(top_n))
-        ax2.set_yticklabels(top_feat["feature"].values, fontsize=6)
-        ax2.invert_yaxis()
-        ax2.set_xlabel("Importancia Relativa", fontsize=9, fontweight=600)
-        ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=10, fontweight=700)
-        fig2.patch.set_facecolor('#0a0a1a')
-        ax2.set_facecolor('#1a1040')
-        ax2.tick_params(colors='white', labelsize=6)
-        ax2.xaxis.label.set_color('white')
-        ax2.title.set_color('white')
-        for bar in bars:
-            bar.set_edgecolor((0.486, 0.227, 0.929, 0.3))
-            bar.set_linewidth(0.5)
-        col_fi, _ = st.columns([3, 1])
-        with col_fi:
-            st.pyplot(fig2)
-
-        with st.expander("Ver tabla completa de importancia"):
-            st.dataframe(importance_df, use_container_width=True)
-
-    with cr_tab:
-        report = metadata.get("classification_report", {})
-        report_df = pd.DataFrame(report).T
-        if "accuracy" in report_df.index:
-            st.metric("Accuracy Global", f"{report_df.loc['accuracy', 'precision']:.2%}" if 'precision' in report_df.columns else "N/A")
-            report_df = report_df.drop("accuracy")
-        if "macro avg" in report_df.index:
-            report_df = report_df.drop("macro avg")
-        if "weighted avg" in report_df.index:
-            report_df = report_df.drop("weighted avg")
-        st.dataframe(report_df.style.format({
-            "precision": "{:.2%}", "recall": "{:.2%}",
-            "f1-score": "{:.2%}", "support": "{:.0f}"
-        }), use_container_width=True)
-
-    with roc_tab:
+    st.markdown('<div class="section-title">Matriz de Confusion</div>', unsafe_allow_html=True)
+    if "matrix" in cm_best and "labels" in cm_best:
         import matplotlib.pyplot as plt
-        model_names = {
-            'random_forest': 'Random Forest',
-            'svm_calibrado': 'SVM Calibrado',
-            'stacking_ensemble': 'Stacking Ensemble',
-            'neural_network': 'Red Neuronal'
-        }
-        colors_models = ['#a78bfa', '#7c3aed', '#6d28d9', '#c4b5fd']
-        auc_data = []
+        import seaborn as sns
+        cm = np.array(cm_best["matrix"])
+        labels = cm_best["labels"]
+        fig, ax = plt.subplots(figsize=(5, 4))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":6},
+                    xticklabels=labels, yticklabels=labels, ax=ax)
+        ax.set_xlabel("Predicho", fontsize=9, fontweight=600)
+        ax.set_ylabel("Real", fontsize=9, fontweight=600)
+        ax.set_title("Matriz de Confusion", fontsize=10, fontweight=700)
+        fig.patch.set_facecolor('#0a0a1a')
+        ax.set_facecolor('#1a1040')
+        ax.tick_params(colors='white', labelsize=6)
+        ax.xaxis.label.set_color('white')
+        ax.yaxis.label.set_color('white')
+        ax.title.set_color('white')
+        col_cm, _ = st.columns([3, 1])
+        with col_cm:
+            st.pyplot(fig)
+
+    st.markdown('<div class="section-title">Importancia de Caracteristicas</div>', unsafe_allow_html=True)
+    top_n = min(15, len(importance_df))
+    top_feat = importance_df.head(top_n)
+    fig2, ax2 = plt.subplots(figsize=(5, 3.5))
+    colors = plt.cm.Purples(np.linspace(0.3, 0.9, top_n))[::-1]
+    bars = ax2.barh(range(top_n), top_feat["importance"].values, color=colors)
+    ax2.set_yticks(range(top_n))
+    ax2.set_yticklabels(top_feat["feature"].values, fontsize=6)
+    ax2.invert_yaxis()
+    ax2.set_xlabel("Importancia Relativa", fontsize=9, fontweight=600)
+    ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=10, fontweight=700)
+    fig2.patch.set_facecolor('#0a0a1a')
+    ax2.set_facecolor('#1a1040')
+    ax2.tick_params(colors='white', labelsize=6)
+    ax2.xaxis.label.set_color('white')
+    ax2.title.set_color('white')
+    for bar in bars:
+        bar.set_edgecolor((0.486, 0.227, 0.929, 0.3))
+        bar.set_linewidth(0.5)
+    col_fi, _ = st.columns([3, 1])
+    with col_fi:
+        st.pyplot(fig2)
+
+    with st.expander("Ver tabla completa de importancia"):
+        st.dataframe(importance_df, use_container_width=True)
+
+    st.markdown('<div class="section-title">Reporte de Clasificacion</div>', unsafe_allow_html=True)
+    report = metadata.get("classification_report", {})
+    report_df = pd.DataFrame(report).T
+    if "accuracy" in report_df.index:
+        st.metric("Accuracy Global", f"{report_df.loc['accuracy', 'precision']:.2%}" if 'precision' in report_df.columns else "N/A")
+        report_df = report_df.drop("accuracy")
+    if "macro avg" in report_df.index:
+        report_df = report_df.drop("macro avg")
+    if "weighted avg" in report_df.index:
+        report_df = report_df.drop("weighted avg")
+    st.dataframe(report_df.style.format({
+        "precision": "{:.2%}", "recall": "{:.2%}",
+        "f1-score": "{:.2%}", "support": "{:.0f}"
+    }), use_container_width=True)
+
+    st.markdown('<div class="section-title">Curvas ROC / PR</div>', unsafe_allow_html=True)
+    import matplotlib.pyplot as plt
+    model_names = {
+        'random_forest': 'Random Forest',
+        'svm_calibrado': 'SVM Calibrado',
+        'stacking_ensemble': 'Stacking Ensemble',
+        'neural_network': 'Red Neuronal'
+    }
+    colors_models = ['#a78bfa', '#7c3aed', '#6d28d9', '#c4b5fd']
+    auc_data = []
+
+    rokcol1, rokcol2 = st.columns(2)
+    with rokcol1:
         roc_fig, roc_ax = plt.subplots(figsize=(5.5, 4))
         for idx, (mkey, mname) in enumerate(model_names.items()):
             if mkey in roc_data:
@@ -873,8 +885,8 @@ def pagina_modelo():
         roc_ax.plot([0, 1], [0, 1], 'k--', alpha=0.3, label='Random')
         roc_ax.set_xlabel("False Positive Rate", fontsize=11)
         roc_ax.set_ylabel("True Positive Rate", fontsize=11)
-        roc_ax.set_title("ROC Curves — Comparación de Modelos (Micro-average)", fontsize=13, fontweight=700)
-        roc_ax.legend(loc='lower right', fontsize=9)
+        roc_ax.set_title("ROC Curves — Comparación (Micro-average)", fontsize=12, fontweight=700)
+        roc_ax.legend(loc='lower right', fontsize=8)
         roc_fig.patch.set_facecolor('#0a0a1a')
         roc_ax.set_facecolor('#1a1040')
         roc_ax.tick_params(colors='white')
@@ -883,6 +895,7 @@ def pagina_modelo():
         roc_ax.title.set_color('white')
         st.pyplot(roc_fig)
 
+    with rokcol2:
         pr_fig, pr_ax = plt.subplots(figsize=(5.5, 4))
         for idx, (mkey, mname) in enumerate(model_names.items()):
             if mkey in pr_data:
@@ -891,8 +904,8 @@ def pagina_modelo():
                           label=f"{mname} (AUC={micro['auc']:.3f})", linewidth=2)
         pr_ax.set_xlabel("Recall", fontsize=11)
         pr_ax.set_ylabel("Precision", fontsize=11)
-        pr_ax.set_title("Precision-Recall Curves — Comparación de Modelos (Micro-average)", fontsize=13, fontweight=700)
-        pr_ax.legend(loc='lower left', fontsize=9)
+        pr_ax.set_title("Precision-Recall Curves — Comparación (Micro-average)", fontsize=12, fontweight=700)
+        pr_ax.legend(loc='lower left', fontsize=8)
         pr_fig.patch.set_facecolor('#0a0a1a')
         pr_ax.set_facecolor('#1a1040')
         pr_ax.tick_params(colors='white')
@@ -901,31 +914,31 @@ def pagina_modelo():
         pr_ax.title.set_color('white')
         st.pyplot(pr_fig)
 
-        st.markdown("### AUC Scores por Modelo")
-        auc_df = pd.DataFrame(auc_data)
-        st.dataframe(auc_df, hide_index=True, use_container_width=True)
+    st.markdown("### AUC Scores por Modelo")
+    auc_df = pd.DataFrame(auc_data)
+    st.dataframe(auc_df, hide_index=True, use_container_width=True)
 
-        with st.expander("Ver curvas por clase (Stacking Ensemble)"):
-            stacking_roc = roc_data.get('stacking_ensemble', {})
-            if 'per_class' in stacking_roc:
-                fig3, ax3 = plt.subplots(figsize=(5.5, 4))
-                colors_genre = plt.cm.Purples(np.linspace(0.3, 0.9, len(genres)))
-                for i, g in enumerate(genres):
-                    if g in stacking_roc['per_class']:
-                        d = stacking_roc['per_class'][g]
-                        ax3.plot(d['fpr'], d['tpr'], color=colors_genre[i], label=f"{g} (AUC={d['auc']:.3f})", linewidth=1.5)
-                ax3.plot([0, 1], [0, 1], 'k--', alpha=0.3)
-                ax3.set_xlabel("False Positive Rate")
-                ax3.set_ylabel("True Positive Rate")
-                ax3.set_title("ROC Curves por Clase — Stacking Ensemble", fontsize=13, fontweight=700)
-                ax3.legend(loc='lower right', fontsize=8)
-                fig3.patch.set_facecolor('#0a0a1a')
-                ax3.set_facecolor('#1a1040')
-                ax3.tick_params(colors='white')
-                ax3.xaxis.label.set_color('white')
-                ax3.yaxis.label.set_color('white')
-                ax3.title.set_color('white')
-                st.pyplot(fig3)
+    with st.expander("Ver curvas por clase (Stacking Ensemble)"):
+        stacking_roc = roc_data.get('stacking_ensemble', {})
+        if 'per_class' in stacking_roc:
+            fig3, ax3 = plt.subplots(figsize=(5.5, 4))
+            colors_genre = plt.cm.Purples(np.linspace(0.3, 0.9, len(genres)))
+            for i, g in enumerate(genres):
+                if g in stacking_roc['per_class']:
+                    d = stacking_roc['per_class'][g]
+                    ax3.plot(d['fpr'], d['tpr'], color=colors_genre[i], label=f"{g} (AUC={d['auc']:.3f})", linewidth=1.5)
+            ax3.plot([0, 1], [0, 1], 'k--', alpha=0.3)
+            ax3.set_xlabel("False Positive Rate")
+            ax3.set_ylabel("True Positive Rate")
+            ax3.set_title("ROC Curves por Clase — Stacking Ensemble", fontsize=13, fontweight=700)
+            ax3.legend(loc='lower right', fontsize=8)
+            fig3.patch.set_facecolor('#0a0a1a')
+            ax3.set_facecolor('#1a1040')
+            ax3.tick_params(colors='white')
+            ax3.xaxis.label.set_color('white')
+            ax3.yaxis.label.set_color('white')
+            ax3.title.set_color('white')
+            st.pyplot(fig3)
 
     st.markdown("""
         <div class="footer">
