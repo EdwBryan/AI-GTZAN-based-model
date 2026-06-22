@@ -12,8 +12,8 @@ ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
 APP_DIR = Path(__file__).parent
 ROOT_DIR = APP_DIR.parent
 NOTEBOOK_FILES = {
-    "IA-Model.ipynb": ROOT_DIR / "IA-Model.ipynb",
-    "ETL.ipynb": ROOT_DIR / "ETL.ipynb",
+    "IA-Model.ipynb": APP_DIR / "IA-Model.ipynb",
+    "ETL.ipynb": APP_DIR / "ETL.ipynb",
 }
 CODE_FILES = {
     "train_and_save.py": APP_DIR / "train_and_save.py",
@@ -21,7 +21,7 @@ CODE_FILES = {
     "app.py": APP_DIR / "app.py",
 }
 ROOT_FILES = {
-    "Dockerfile": ROOT_DIR / "Dockerfile",
+    "Dockerfile": APP_DIR / "Dockerfile",
 }
 
 @st.cache_resource
@@ -313,16 +313,16 @@ def pagina_codigo():
     st.markdown("### Notebooks de Entrenamiento")
     # Try primary path, fallback to CWD
     def _find_notebook(name):
-        p = ROOT_DIR / name
-        if p.exists():
+        p = NOTEBOOK_FILES.get(name)
+        if p and p.exists():
             return p
-        p2 = Path.cwd() / name
+        p2 = ROOT_DIR / name
         if p2.exists():
             return p2
-        p3 = Path.cwd().parent / name
+        p3 = Path.cwd() / name
         if p3.exists():
             return p3
-        return p  # return the primary for error msg
+        return p or ROOT_DIR / name
 
     nb_tab = st.radio(
         "Selecciona un notebook:",
@@ -353,13 +353,16 @@ def pagina_codigo():
 
     st.markdown("### Scripts del Sistema")
     def _find_script(name):
-        p = (APP_DIR / name) if Path(name).suffix == '.py' else (ROOT_DIR / name)
-        if p.exists():
+        p = CODE_FILES.get(name) or ROOT_FILES.get(name)
+        if p and p.exists():
             return p
-        p2 = Path.cwd() / name
+        p2 = (APP_DIR / name) if Path(name).suffix == '.py' else (ROOT_DIR / name)
         if p2.exists():
             return p2
-        return p
+        p3 = Path.cwd() / name
+        if p3.exists():
+            return p3
+        return p or APP_DIR / name
     code_tab = st.radio(
         "Selecciona un archivo:",
         list(CODE_FILES.keys()) + list(ROOT_FILES.keys()),
@@ -460,19 +463,21 @@ def pagina_pruebas():
         import seaborn as sns
         cm = np.array(cm_best["matrix"])
         labels = cm_best["labels"]
-        fig, ax = plt.subplots(figsize=(7, 5.5))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":7},
+        fig, ax = plt.subplots(figsize=(5, 4))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":6},
                     xticklabels=labels, yticklabels=labels, ax=ax)
         ax.set_xlabel("Predicho", fontsize=9, fontweight=600)
         ax.set_ylabel("Real", fontsize=9, fontweight=600)
-        ax.set_title(f"Matriz de Confusion - Stacking Ensemble ({metadata['test_accuracy']:.1%})", fontsize=11, fontweight=700)
+        ax.set_title(f"Matriz de Confusion - Stacking Ensemble ({metadata['test_accuracy']:.1%})", fontsize=10, fontweight=700)
         fig.patch.set_facecolor('#0a0a1a')
         ax.set_facecolor('#1a1040')
-        ax.tick_params(colors='white', labelsize=7)
+        ax.tick_params(colors='white', labelsize=6)
         ax.xaxis.label.set_color('white')
         ax.yaxis.label.set_color('white')
         ax.title.set_color('white')
-        st.pyplot(fig)
+        col_cm, _ = st.columns([3, 1])
+        with col_cm:
+            st.pyplot(fig)
 
     st.markdown('<div class="section-title">Análisis de Errores — Pares más Confundidos</div>', unsafe_allow_html=True)
     error_tabs = st.tabs(list(error_analysis.keys()))
@@ -497,23 +502,25 @@ def pagina_pruebas():
     st.markdown('<div class="section-title">Importancia de Caracteristicas (Random Forest 500 arboles)</div>', unsafe_allow_html=True)
     top_n = min(15, len(importance_df))
     top_feat = importance_df.head(top_n)
-    fig2, ax2 = plt.subplots(figsize=(7, 5))
+    fig2, ax2 = plt.subplots(figsize=(5, 3.5))
     colors = plt.cm.Purples(np.linspace(0.3, 0.9, top_n))[::-1]
     bars = ax2.barh(range(top_n), top_feat["importance"].values, color=colors)
     ax2.set_yticks(range(top_n))
-    ax2.set_yticklabels(top_feat["feature"].values, fontsize=7)
+    ax2.set_yticklabels(top_feat["feature"].values, fontsize=6)
     ax2.invert_yaxis()
     ax2.set_xlabel("Importancia", fontsize=9, fontweight=600)
-    ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=11, fontweight=700)
+    ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=10, fontweight=700)
     fig2.patch.set_facecolor('#0a0a1a')
     ax2.set_facecolor('#1a1040')
-    ax2.tick_params(colors='white', labelsize=7)
+    ax2.tick_params(colors='white', labelsize=6)
     ax2.xaxis.label.set_color('white')
     ax2.title.set_color('white')
     for bar in bars:
         bar.set_edgecolor((0.486, 0.227, 0.929, 0.3))
         bar.set_linewidth(0.5)
-    st.pyplot(fig2)
+    col_fi, _ = st.columns([3, 1])
+    with col_fi:
+        st.pyplot(fig2)
 
     st.markdown('<div class="section-title">Reporte de Clasificacion (Stacking)</div>', unsafe_allow_html=True)
     report = metadata.get("classification_report", {})
@@ -788,40 +795,44 @@ def pagina_modelo():
             import seaborn as sns
             cm = np.array(cm_best["matrix"])
             labels = cm_best["labels"]
-            fig, ax = plt.subplots(figsize=(6, 4.8))
-            sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":7},
+            fig, ax = plt.subplots(figsize=(5, 4))
+            sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":6},
                         xticklabels=labels, yticklabels=labels, ax=ax)
             ax.set_xlabel("Predicho", fontsize=9, fontweight=600)
             ax.set_ylabel("Real", fontsize=9, fontweight=600)
-            ax.set_title("Matriz de Confusion", fontsize=11, fontweight=700)
+            ax.set_title("Matriz de Confusion", fontsize=10, fontweight=700)
             fig.patch.set_facecolor('#0a0a1a')
             ax.set_facecolor('#1a1040')
-            ax.tick_params(colors='white', labelsize=7)
+            ax.tick_params(colors='white', labelsize=6)
             ax.xaxis.label.set_color('white')
             ax.yaxis.label.set_color('white')
             ax.title.set_color('white')
-            st.pyplot(fig)
+            col_cm, _ = st.columns([3, 1])
+            with col_cm:
+                st.pyplot(fig)
 
     with fi_tab:
         top_n = min(15, len(importance_df))
         top_feat = importance_df.head(top_n)
-        fig2, ax2 = plt.subplots(figsize=(6, 4.5))
+        fig2, ax2 = plt.subplots(figsize=(5, 3.5))
         colors = plt.cm.Purples(np.linspace(0.3, 0.9, top_n))[::-1]
         bars = ax2.barh(range(top_n), top_feat["importance"].values, color=colors)
         ax2.set_yticks(range(top_n))
-        ax2.set_yticklabels(top_feat["feature"].values, fontsize=7)
+        ax2.set_yticklabels(top_feat["feature"].values, fontsize=6)
         ax2.invert_yaxis()
         ax2.set_xlabel("Importancia Relativa", fontsize=9, fontweight=600)
-        ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=11, fontweight=700)
+        ax2.set_title(f"Top {top_n} Caracteristicas mas Importantes", fontsize=10, fontweight=700)
         fig2.patch.set_facecolor('#0a0a1a')
         ax2.set_facecolor('#1a1040')
-        ax2.tick_params(colors='white', labelsize=7)
+        ax2.tick_params(colors='white', labelsize=6)
         ax2.xaxis.label.set_color('white')
         ax2.title.set_color('white')
         for bar in bars:
             bar.set_edgecolor((0.486, 0.227, 0.929, 0.3))
             bar.set_linewidth(0.5)
-        st.pyplot(fig2)
+        col_fi, _ = st.columns([3, 1])
+        with col_fi:
+            st.pyplot(fig2)
 
         with st.expander("Ver tabla completa de importancia"):
             st.dataframe(importance_df, use_container_width=True)
@@ -851,7 +862,7 @@ def pagina_modelo():
         }
         colors_models = ['#a78bfa', '#7c3aed', '#6d28d9', '#c4b5fd']
         auc_data = []
-        roc_fig, roc_ax = plt.subplots(figsize=(7, 5))
+        roc_fig, roc_ax = plt.subplots(figsize=(5.5, 4))
         for idx, (mkey, mname) in enumerate(model_names.items()):
             if mkey in roc_data:
                 micro = roc_data[mkey]['micro']
@@ -872,7 +883,7 @@ def pagina_modelo():
         roc_ax.title.set_color('white')
         st.pyplot(roc_fig)
 
-        pr_fig, pr_ax = plt.subplots(figsize=(7, 5))
+        pr_fig, pr_ax = plt.subplots(figsize=(5.5, 4))
         for idx, (mkey, mname) in enumerate(model_names.items()):
             if mkey in pr_data:
                 micro = pr_data[mkey]['micro']
@@ -897,7 +908,7 @@ def pagina_modelo():
         with st.expander("Ver curvas por clase (Stacking Ensemble)"):
             stacking_roc = roc_data.get('stacking_ensemble', {})
             if 'per_class' in stacking_roc:
-                fig3, ax3 = plt.subplots(figsize=(7, 5))
+                fig3, ax3 = plt.subplots(figsize=(5.5, 4))
                 colors_genre = plt.cm.Purples(np.linspace(0.3, 0.9, len(genres)))
                 for i, g in enumerate(genres):
                     if g in stacking_roc['per_class']:

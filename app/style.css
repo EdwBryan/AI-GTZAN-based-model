@@ -652,6 +652,22 @@ pre {
     max-width: 100% !important;
 }
 
+/* Additional table wobble fixes for HF Spaces */
+[data-testid="stDataFrame"] [data-testid="StyledDataFrameColHeader"] {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1 !important;
+}
+div[data-testid="stDataFrame"] table tbody tr {
+    height: auto !important;
+}
+div[data-testid="stDataFrame"] table tbody td {
+    white-space: nowrap !important;
+}
+div[data-testid="stDataFrame"] > div:first-child {
+    overflow: auto !important;
+}
+
 /* Custom file uploader - squared, centered, elegant */
 .stFileUploader {
     display: flex;
