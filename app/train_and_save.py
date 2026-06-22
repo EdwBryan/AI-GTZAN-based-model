@@ -162,7 +162,7 @@ def train_and_save():
     print(f"Best NN accuracy: {best_nn_acc:.4f}")
     results['neural_network'] = {
         'accuracy': best_nn_acc, 'cv_mean': float(np.mean(nn_scores)), 'cv_std': float(np.std(nn_scores)),
-        'model': best_nn_model, 'predictions': le.inverse_transform(best_nn_pred)
+        'model': best_nn_model, 'predictions': best_nn_pred
     }
 
     print("\n" + "=" * 60)
