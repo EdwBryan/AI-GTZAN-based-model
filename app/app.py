@@ -615,21 +615,30 @@ def pagina_clasificador():
         st.markdown("### Audio Original")
         st.audio(file_bytes, format=f"audio/{uploaded.type.split('/')[-1] if '/' in uploaded.type else 'wav'}")
 
-        # Waveform visualization
         if duration_sec >= 30:
+            # Slider first — get current values directly
+            trim_range = st.slider(
+                "Selecciona el segmento a analizar:",
+                0.0, max_end, (0.0, min(30.0, max_end)),
+                0.5, format="%.1fs",
+                disabled=result_shown,
+                key="trim_slider"
+            )
+            trim_start, trim_end = trim_range
+            st.session_state["trim_start"] = trim_start
+            st.session_state["trim_end"] = trim_end
+
+            # Waveform using actual slider values
             import matplotlib.pyplot as plt
             import librosa
             y_full, sr_full = load_audio(file_bytes)
             time_axis = np.linspace(0, len(y_full)/sr_full, len(y_full))
             fig_wave, ax_wave = plt.subplots(figsize=(9, 1.8))
             ax_wave.plot(time_axis, y_full, color='#a78bfa', linewidth=0.3, alpha=0.7)
-            if "trim_start" in st.session_state and "trim_end" in st.session_state:
-                ts = st.session_state["trim_start"]
-                te = st.session_state["trim_end"]
-                mask = (time_axis >= ts) & (time_axis <= te)
-                ax_wave.fill_between(time_axis, y_full, where=mask, color='#7c3aed', alpha=0.3)
-                ax_wave.axvline(ts, color='#fbbf24', linewidth=0.8, linestyle='--')
-                ax_wave.axvline(te, color='#fbbf24', linewidth=0.8, linestyle='--')
+            mask = (time_axis >= trim_start) & (time_axis <= trim_end)
+            ax_wave.fill_between(time_axis, y_full, where=mask, color='#7c3aed', alpha=0.3)
+            ax_wave.axvline(trim_start, color='#fbbf24', linewidth=0.8, linestyle='--')
+            ax_wave.axvline(trim_end, color='#fbbf24', linewidth=0.8, linestyle='--')
             ax_wave.set_xlabel("Tiempo (s)", fontsize=8, color='#6b7280')
             ax_wave.set_ylabel("Amplitud", fontsize=8, color='#6b7280')
             ax_wave.set_title("Forma de onda — segmento seleccionado en amarillo", fontsize=9, fontweight=600, color='#8b9dc3')
@@ -641,19 +650,8 @@ def pagina_clasificador():
             ax_wave.title.set_color('#8b9dc3')
             col_wave, _ = st.columns([4, 1])
             with col_wave:
-                st.pyplot(fig_wave)
-
-            # Slider
-            trim_range = st.slider(
-                "Selecciona el segmento a analizar:",
-                0.0, max_end, (0.0, min(30.0, max_end)),
-                0.5, format="%.1fs",
-                disabled=result_shown,
-                key="trim_slider"
-            )
-            trim_start, trim_end = trim_range
-            st.session_state["trim_start"] = trim_start
-            st.session_state["trim_end"] = trim_end
+                with st.spinner("Generando visualización..."):
+                    st.pyplot(fig_wave)
 
             # Preview the trimmed segment
             st.markdown("### Vista Previa del Segmento")
