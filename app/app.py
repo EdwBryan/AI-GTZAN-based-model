@@ -880,20 +880,20 @@ def pagina_modelo():
         cm = np.array(cm_best["matrix"])
         labels = cm_best["labels"]
         fig, ax = plt.subplots(figsize=(4, 3))
-            sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":5},
-                        xticklabels=labels, yticklabels=labels, ax=ax)
-            ax.set_xlabel("Predicho", fontsize=8, fontweight=600)
-            ax.set_ylabel("Real", fontsize=8, fontweight=600)
-            ax.set_title("Matriz de Confusion", fontsize=9, fontweight=700)
-            fig.patch.set_facecolor('#0a0a1a')
-            ax.set_facecolor('#1a1040')
-            ax.tick_params(colors='white', labelsize=5)
-            ax.xaxis.label.set_color('white')
-            ax.yaxis.label.set_color('white')
-            ax.title.set_color('white')
-            col_cm, _ = st.columns([2, 3])
-            with col_cm:
-                st.pyplot(fig)
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Purples", annot_kws={"fontsize":5},
+                    xticklabels=labels, yticklabels=labels, ax=ax)
+        ax.set_xlabel("Predicho", fontsize=8, fontweight=600)
+        ax.set_ylabel("Real", fontsize=8, fontweight=600)
+        ax.set_title("Matriz de Confusion", fontsize=9, fontweight=700)
+        fig.patch.set_facecolor('#0a0a1a')
+        ax.set_facecolor('#1a1040')
+        ax.tick_params(colors='white', labelsize=5)
+        ax.xaxis.label.set_color('white')
+        ax.yaxis.label.set_color('white')
+        ax.title.set_color('white')
+        col_cm, _ = st.columns([2, 3])
+        with col_cm:
+            st.pyplot(fig)
 
     st.markdown('<div class="section-title">Importancia de Caracteristicas</div>', unsafe_allow_html=True)
     top_n = min(15, len(importance_df))
