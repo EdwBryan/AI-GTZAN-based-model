@@ -35,17 +35,25 @@ def load_artifacts():
         metadata = json.load(f)
     with open(ARTIFACTS_DIR / "feature_names.json") as f:
         feature_names = json.load(f)
-    with open(ARTIFACTS_DIR / "confusion_matrix.json") as f:
-        cm_data = json.load(f)
     importance_df = pd.read_csv(ARTIFACTS_DIR / "feature_importance.csv")
-    return model, scaler, le, metadata, feature_names, cm_data, importance_df
+    with open(ARTIFACTS_DIR / "comparison.json") as f:
+        comparison = json.load(f)
+    with open(ARTIFACTS_DIR / "confusion_matrices.json") as f:
+        cm_all = json.load(f)
+    with open(ARTIFACTS_DIR / "error_analysis.json") as f:
+        error_analysis = json.load(f)
+    with open(ARTIFACTS_DIR / "classification_reports.json") as f:
+        reports_all = json.load(f)
+    cm_best = cm_all[metadata["best_model"]]
+    return model, scaler, le, metadata, feature_names, importance_df, comparison, cm_all, cm_best, error_analysis, reports_all
 
 if not ARTIFACTS_DIR.exists() or not (ARTIFACTS_DIR / "stacking_model.pkl").exists():
     st.error("Modelo no encontrado. Ejecuta train_and_save.py primero.")
     st.stop()
 
-model, scaler, le, metadata, feature_names, cm_data, importance_df = load_artifacts()
+model, scaler, le, metadata, feature_names, importance_df, comparison, cm_all, cm_best, error_analysis, reports_all = load_artifacts()
 genres = metadata["genres"]
+best_model_name = metadata["best_model"]
 
 def css():
     css_path = Path(__file__).parent / "style.css"
@@ -304,12 +312,19 @@ def pagina_codigo():
 
 def pagina_pruebas():
     st.markdown('<div class="section-title">🧪 Ejecución y Pruebas del Sistema</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Sección 7.1.3 — Resultados de la evaluación del modelo y pruebas del sistema.</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Sección 7.1.3 — Resultados de la evaluación de 4 modelos, pruebas del sistema y análisis de errores.</p>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-title">Comparación de Modelos</div>', unsafe_allow_html=True)
+    comp_df = pd.DataFrame([
+        {"Modelo": k.replace("_", " ").title(), "Test Accuracy": f'{v["accuracy"]:.2%}', "CV (k=5)": f'{v["cv_mean"]:.2%}'}
+        for k, v in sorted(comparison.items(), key=lambda x: x[1]["accuracy"], reverse=True)
+    ])
+    st.dataframe(comp_df, hide_index=True, use_container_width=True)
+    st.markdown(f'<p style="color:#a78bfa;font-weight:600;">✅ Mejor: Stacking Ensemble ({metadata["test_accuracy"]:.1%}) — Combina RF (300) + SVM (RBF, C=10) + LogisticRegression</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
-
     with col1:
-        st.markdown('<div class="doc-card fade-in"><h3>📊 Métricas Globales</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="doc-card fade-in"><h3>📊 Métricas Globales (Stacking)</h3></div>', unsafe_allow_html=True)
         st.markdown(f"""
             <div class="feature-card">
                 <div class="feature-name">Precisión (Accuracy)</div>
@@ -334,7 +349,7 @@ def pagina_pruebas():
         """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="doc-card fade-in"><h3>🎯 Precisión por Género</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="doc-card fade-in"><h3>🎯 Precisión por Género (Stacking)</h3></div>', unsafe_allow_html=True)
         class_acc_df = pd.DataFrame([
             {"Género": g.capitalize(), "Precisión": f"{v:.1%}"}
             for g, v in sorted(metadata["class_accuracy"].items(), key=lambda x: x[1], reverse=True)
@@ -354,18 +369,18 @@ def pagina_pruebas():
             </div>
         """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Matriz de Confusión</div>', unsafe_allow_html=True)
-    if "matrix" in cm_data and "labels" in cm_data:
+    st.markdown('<div class="section-title">Matriz de Confusión — Stacking Ensemble</div>', unsafe_allow_html=True)
+    if "matrix" in cm_best and "labels" in cm_best:
         import matplotlib.pyplot as plt
         import seaborn as sns
-        cm = np.array(cm_data["matrix"])
-        labels = cm_data["labels"]
+        cm = np.array(cm_best["matrix"])
+        labels = cm_best["labels"]
         fig, ax = plt.subplots(figsize=(10, 8))
         sns.heatmap(cm, annot=True, fmt="d", cmap="Purples",
                     xticklabels=labels, yticklabels=labels, ax=ax)
         ax.set_xlabel("Predicho", fontsize=11, fontweight=600)
         ax.set_ylabel("Real", fontsize=11, fontweight=600)
-        ax.set_title("Matriz de Confusión — Random Forest (200 árboles)", fontsize=13, fontweight=700)
+        ax.set_title(f"Matriz de Confusión — Stacking Ensemble ({metadata['test_accuracy']:.1%})", fontsize=13, fontweight=700)
         fig.patch.set_facecolor('#0a0a1a')
         ax.set_facecolor('#1a1040')
         ax.tick_params(colors='white')
@@ -374,7 +389,25 @@ def pagina_pruebas():
         ax.title.set_color('white')
         st.pyplot(fig)
 
-    st.markdown('<div class="section-title">Importancia de Características</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Análisis de Errores — Pares más Confundidos</div>', unsafe_allow_html=True)
+    error_tabs = st.tabs(list(error_analysis.keys()))
+    for i, (model_name, pairs) in enumerate(error_analysis.items()):
+        with error_tabs[i]:
+            if pairs:
+                for p in pairs:
+                    st.markdown(f"""
+                        <div style="display:flex;align-items:center;gap:1rem;padding:0.5rem 0.8rem;margin:0.3rem 0;
+                            background:rgba(30,27,75,0.25);border-radius:10px;border:1px solid rgba(124,58,237,0.08);">
+                            <span style="font-weight:700;color:#f87171;">{p['actual'].capitalize()}</span>
+                            <span style="color:#6b7280;">→</span>
+                            <span style="font-weight:700;color:#fbbf24;">{p['predicted'].capitalize()}</span>
+                            <span style="margin-left:auto;font-weight:600;color:#a78bfa;">{p['count']} veces</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("No se encontraron confusiones significativas (>=2).")
+
+    st.markdown('<div class="section-title">Importancia de Características (Random Forest 500 árboles)</div>', unsafe_allow_html=True)
     top_n = min(15, len(importance_df))
     top_feat = importance_df.head(top_n)
     fig2, ax2 = plt.subplots(figsize=(10, 6))
@@ -395,7 +428,7 @@ def pagina_pruebas():
         bar.set_linewidth(0.5)
     st.pyplot(fig2)
 
-    st.markdown('<div class="section-title">Reporte de Clasificación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Reporte de Clasificación (Stacking)</div>', unsafe_allow_html=True)
     report = metadata.get("classification_report", {})
     report_df = pd.DataFrame(report).T
     if "accuracy" in report_df.index:
@@ -515,72 +548,84 @@ def pagina_clasificador():
     """, unsafe_allow_html=True)
 
 def pagina_modelo():
-    st.markdown('<div class="section-title">📊 Modelo — Random Forest</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Detalles técnicos del modelo de clasificación entrenado.</p>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title">📊 Modelo — Stacking Ensemble ({metadata["test_accuracy"]:.0%} accuracy)</div>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Detalles técnicos del modelo de clasificación entrenado. Se evaluaron 4 modelos: el Stacking Ensemble es el mejor con un 75% de accuracy.</p>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-title">Comparación de Modelos</div>', unsafe_allow_html=True)
+    comp_df = pd.DataFrame([
+        {"Modelo": k.replace("_", " ").title(), "Accuracy": f'{v["accuracy"]:.2%}', "CV (k=5)": f'{v["cv_mean"]:.2%} ± {v["cv_std"]:.2%}'}
+        for k, v in sorted(comparison.items(), key=lambda x: x[1]["accuracy"], reverse=True)
+    ])
+    cols = st.columns([1, 2, 2])
+    cols[0].markdown("**Modelo**")
+    cols[1].markdown("**Test Accuracy**")
+    cols[2].markdown("**Cross-Validation (k=5)**")
+    for _, row in comp_df.iterrows():
+        c1, c2, c3 = st.columns([1, 2, 2])
+        c1.markdown(f'{row["Modelo"]}')
+        c2.markdown(f'**{row["Accuracy"]}**' if "Stacking" in row["Modelo"] else row["Accuracy"])
+        c3.markdown(f'{row["CV (k=5)"]}')
+    st.markdown(f'<p style="color:#a78bfa;font-weight:600;">✅ Mejor modelo: Stacking Ensemble ({metadata["test_accuracy"]:.1%})</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns([1, 1])
 
     with col1:
-        st.markdown("""
+        st.markdown(f"""
             <div class="feature-card">
-                <div class="feature-name">Algoritmo</div>
-                <div class="feature-value">Random Forest Classifier</div>
+                <div class="feature-name">Mejor Algoritmo</div>
+                <div class="feature-value">Stacking Ensemble (RF + SVM + LogisticRegression)</div>
             </div>
             <div class="feature-card">
-                <div class="feature-name">Número de Árboles</div>
-                <div class="feature-value">200</div>
+                <div class="feature-name">Clasificadores Base</div>
+                <div class="feature-value">RF (300 trees) + SVM (RBF, C=10)</div>
             </div>
             <div class="feature-card">
-                <div class="feature-name">Criterio de División</div>
-                <div class="feature-value">Gini Impurity</div>
+                <div class="feature-name">Meta-Clasificador</div>
+                <div class="feature-value">Logistic Regression</div>
             </div>
             <div class="feature-card">
-                <div class="feature-name">Precisión Global</div>
-                <div class="feature-value" style="color:#a78bfa;">{:.1%}</div>
+                <div class="feature-name">Precisión Global (Stacking)</div>
+                <div class="feature-value" style="color:#a78bfa;">{metadata['test_accuracy']:.1%}</div>
             </div>
             <div class="feature-card">
                 <div class="feature-name">Características de Entrada</div>
-                <div class="feature-value">{}</div>
+                <div class="feature-value">{metadata["n_features"]}</div>
             </div>
             <div class="feature-card">
                 <div class="feature-name">Split Train/Test</div>
                 <div class="feature-value">70% / 30%</div>
             </div>
-        """.format(metadata["test_accuracy"], metadata["n_features"]), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+            <div class="doc-card" style="margin-top:0.5rem;">
+                <h3 style="font-size:0.9rem;">⚙️ Otros Modelos Evaluados</h3>
+                <ul style="font-size:0.85rem;">
+                    <li><strong>Random Forest:</strong> 500 árboles, max_depth=None</li>
+                    <li><strong>SVM Calibrado:</strong> kernel RBF, C=10, gamma='scale'</li>
+                    <li><strong>Red Neuronal:</strong> 3 capas (256-128-64), BatchNorm, Dropout, Adam lr=0.001</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="doc-card fade-in" style="padding:1rem;"><h3 style="font-size:1rem;">🎯 Precisión por Género</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="doc-card fade-in" style="padding:1rem;"><h3 style="font-size:1rem;">🎯 Precisión por Género (Stacking)</h3></div>', unsafe_allow_html=True)
         class_acc_df = pd.DataFrame([
             {"Género": g.capitalize(), "Precisión": f"{v:.1%}"}
             for g, v in sorted(metadata["class_accuracy"].items(), key=lambda x: x[1], reverse=True)
         ])
         st.dataframe(class_acc_df, hide_index=True, use_container_width=True)
 
-        st.markdown("""
-            <div class="doc-card" style="margin-top:1rem;">
-                <h3 style="font-size:1rem;">⚙️ Hiperparámetros</h3>
-                <ul>
-                    <li><strong>n_estimators:</strong> 200</li>
-                    <li><strong>criterion:</strong> gini</li>
-                    <li><strong>max_depth:</strong> None (default)</li>
-                    <li><strong>min_samples_split:</strong> 2</li>
-                    <li><strong>min_samples_leaf:</strong> 1</li>
-                    <li><strong>random_state:</strong> 42</li>
-                    <li><strong>n_jobs:</strong> -1 (usa todos los cores)</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
-
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
     cm_tab, fi_tab, cr_tab = st.tabs(["📊 Matriz de Confusión", "📈 Importancia de Features", "📋 Reporte de Clasificación"])
 
     with cm_tab:
-        if "matrix" in cm_data and "labels" in cm_data:
+        if "matrix" in cm_best and "labels" in cm_best:
             import matplotlib.pyplot as plt
             import seaborn as sns
-            cm = np.array(cm_data["matrix"])
-            labels = cm_data["labels"]
+            cm = np.array(cm_best["matrix"])
+            labels = cm_best["labels"]
             fig, ax = plt.subplots(figsize=(10, 8))
             sns.heatmap(cm, annot=True, fmt="d", cmap="Purples",
                         xticklabels=labels, yticklabels=labels, ax=ax)
@@ -690,7 +735,7 @@ def pagina_informe():
             use_container_width=True
         )
 
-        cm_json = json.dumps(cm_data, indent=2, ensure_ascii=False)
+        cm_json = json.dumps(cm_best, indent=2, ensure_ascii=False)
         st.download_button(
             "🔢 Matriz de Confusión (JSON)",
             cm_json,
