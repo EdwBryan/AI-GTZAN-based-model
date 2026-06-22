@@ -9,13 +9,18 @@ st.set_page_config(page_title="AI Genre Classifier", page_icon="🎵", layout="w
 
 ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
 APP_DIR = Path(__file__).parent
+ROOT_DIR = APP_DIR.parent
+NOTEBOOK_FILES = {
+    "IA-Model.ipynb": ROOT_DIR / "IA-Model.ipynb",
+    "ETL.ipynb": ROOT_DIR / "ETL.ipynb",
+}
 CODE_FILES = {
-    "app.py": APP_DIR / "app.py",
-    "utils.py": APP_DIR / "utils.py",
     "train_and_save.py": APP_DIR / "train_and_save.py",
+    "utils.py": APP_DIR / "utils.py",
+    "app.py": APP_DIR / "app.py",
 }
 ROOT_FILES = {
-    "Dockerfile": APP_DIR.parent / "Dockerfile",
+    "Dockerfile": ROOT_DIR / "Dockerfile",
 }
 
 @st.cache_resource
@@ -213,32 +218,64 @@ def pagina_documentacion():
 
 def pagina_codigo():
     st.markdown('<div class="section-title">💻 Código del Sistema</div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Sección 7.1.2 — Visualización del código fuente del sistema.</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b9dc3;margin-bottom:1rem;">Sección 7.1.2 — Código fuente del entrenamiento del modelo y del sistema completo.</p>', unsafe_allow_html=True)
 
     with st.expander("📁 Estructura del Proyecto", expanded=True):
         st.markdown("""
         <pre style="background:rgba(15,12,41,0.6);padding:1.2rem;border-radius:12px;border:1px solid rgba(124,58,237,0.1);color:#b0b8cc;font-size:0.85rem;line-height:1.6;">
         <strong style="color:#a78bfa;">AI-GTZAN-based-model/</strong>
+        ├── <strong style="color:#fbbf24;">IA-Model.ipynb</strong>      # Entrenamiento del modelo (Jupyter)
+        ├── <strong style="color:#fbbf24;">ETL.ipynb</strong>           # Extracción y limpieza de datos
         ├── <strong style="color:#a78bfa;">app/</strong>
-        │   ├── app.py              # Aplicación Streamlit (multi-página)
+        │   ├── train_and_save.py   # Entrenamiento del modelo (script)
         │   ├── utils.py            # Extracción de features de audio
-        │   ├── train_and_save.py   # Entrenamiento del modelo Random Forest
+        │   ├── app.py              # Aplicación Streamlit (multi-página)
         │   ├── style.css           # Estilos y tema visual
         │   ├── requirements.txt    # Dependencias Python
         │   └── artifacts/          # Modelo y métricas (generados en build)
         ├── Dockerfile              # Configuración del contenedor
         ├── gtzan_selected_features.csv  # Dataset procesado
-        ├── .gitignore
         └── README.md
         </pre>
         """, unsafe_allow_html=True)
 
-    code_tab = st.selectbox(
-        "Selecciona un archivo para visualizar:",
-        list(CODE_FILES.keys()) + list(ROOT_FILES.keys()),
-        label_visibility="collapsed"
+    st.info("📓 Los notebooks contienen el proceso completo de entrenamiento del modelo (ETL + Random Forest).")
+    st.markdown("### 📓 Notebooks de Entrenamiento")
+    nb_tab = st.selectbox(
+        "Selecciona un notebook:",
+        list(NOTEBOOK_FILES.keys()),
+        label_visibility="collapsed",
+        key="nb_selector"
     )
+    nb_path = NOTEBOOK_FILES.get(nb_tab)
+    if nb_path and nb_path.exists():
+        import json, re
+        raw = nb_path.read_text(encoding="utf-8")
+        nb = json.loads(raw)
+        cells = nb.get("cells", [])
+        md_cells = [c for c in cells if c.get("cell_type") == "markdown"]
+        code_cells = [c for c in cells if c.get("cell_type") == "code"]
+        n_code = len(code_cells)
+        st.caption(f"📄 {nb_tab} — {n_code} celdas de código")
+        tab_labels = ["📝 Resumen"] + [f"📎 Celda {i+1}" for i in range(min(n_code, 20))]
+        tabs = st.tabs(tab_labels)
+        with tabs[0]:
+            for c in md_cells[:10]:
+                src = "".join(c.get("source", []))
+                st.markdown(src)
+            st.markdown(f"*Total: {n_code} celdas de código en {nb_tab}*")
+        for i in range(min(n_code, 20)):
+            with tabs[i+1]:
+                src = "".join(code_cells[i].get("source", []))
+                st.code(src, language="python", line_numbers=True)
 
+    st.markdown("### 🐍 Scripts del Sistema")
+    code_tab = st.selectbox(
+        "Selecciona un archivo:",
+        list(CODE_FILES.keys()) + list(ROOT_FILES.keys()),
+        label_visibility="collapsed",
+        key="code_selector"
+    )
     file_path = CODE_FILES.get(code_tab) or ROOT_FILES.get(code_tab)
     if file_path and file_path.exists():
         content = file_path.read_text(encoding="utf-8")
@@ -354,7 +391,7 @@ def pagina_pruebas():
     ax2.xaxis.label.set_color('white')
     ax2.title.set_color('white')
     for bar in bars:
-        bar.set_edgecolor('rgba(124,58,237,0.3)')
+        bar.set_edgecolor((0.486, 0.227, 0.929, 0.3))
         bar.set_linewidth(0.5)
     st.pyplot(fig2)
 
@@ -444,12 +481,16 @@ def pagina_clasificador():
                     st.dataframe(feat_df, use_container_width=True, height=400)
 
             except Exception as e:
+                import traceback
                 st.error(f"Error al procesar el audio: {e}")
+                with st.expander("🔍 Ver detalle del error"):
+                    st.code(traceback.format_exc(), language="text")
                 st.markdown("""
                     <div class="doc-card" style="margin-top:1rem;">
                         <p style="color:#b0b8cc;font-size:0.9rem;">
                             💡 Sugerencia: Verifica que el archivo sea un audio válido.
-                            Si el problema persiste, intenta con un archivo WAV de 30 segundos.
+                            Si el problema persiste, intenta con un archivo WAV de 30 segundos. Los formatos
+                            MP3 requieren ffmpeg (debe estar instalado en el servidor).
                         </p>
                     </div>
                 """, unsafe_allow_html=True)
@@ -571,7 +612,7 @@ def pagina_modelo():
         ax2.xaxis.label.set_color('white')
         ax2.title.set_color('white')
         for bar in bars:
-            bar.set_edgecolor('rgba(124,58,237,0.3)')
+            bar.set_edgecolor((0.486, 0.227, 0.929, 0.3))
             bar.set_linewidth(0.5)
         st.pyplot(fig2)
 
