@@ -1,3 +1,12 @@
+---
+title: AI Genre Classifier
+emoji: 🎵
+colorFrom: purple
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # AI Genre Classifier
 
 **Clasificador automatico de generos musicales mediante aprendizaje automatico**
